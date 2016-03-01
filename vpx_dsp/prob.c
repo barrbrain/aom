@@ -109,7 +109,7 @@ static uint16_t tree_node_compute_probs(tree_node *tree, int n, uint16_t pdf) {
       uint16_t rp;
       lp = (((uint32_t)pdf)*tree[n].prob + 128) >> 8;
       lp = tree_node_compute_probs(tree, tree[n].l, lp);
-      rp = tree_node_compute_probs(tree, tree[n].r, pdf - lp);
+      rp = tree_node_compute_probs(tree, tree[n].r, lp > pdf ? 0 : pdf - lp);
       return lp + rp;
     }
     else {
@@ -117,7 +117,7 @@ static uint16_t tree_node_compute_probs(tree_node *tree, int n, uint16_t pdf) {
       uint16_t lp;
       rp = (((uint32_t)pdf)*(256 - tree[n].prob) + 128) >> 8;
       rp = tree_node_compute_probs(tree, tree[n].r, rp);
-      lp = tree_node_compute_probs(tree, tree[n].l, pdf - rp);
+      lp = tree_node_compute_probs(tree, tree[n].l, rp > pdf ? 0 : pdf - rp);
       return lp + rp;
     }
   }
