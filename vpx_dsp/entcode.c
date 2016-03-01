@@ -22,6 +22,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 
+#include <stdlib.h>
 #include "entcode.h"
 
 /*CDFs for uniform probability distributions of small sizes (2 through 16,
@@ -85,3 +86,13 @@ uint32_t od_ec_tell_frac(uint32_t nbits_total, uint32_t rng) {
   }
   return nbits - l;
 }
+
+#if defined(OD_ENABLE_ASSERTIONS)
+# include <stdio.h>
+
+void od_fatal_impl(const char *_str, const char *_file, int _line) {
+  fprintf(stderr, "Fatal (internal) error in %s, line %d: %s\n",
+   _file, _line, _str);
+  abort();
+}
+#endif

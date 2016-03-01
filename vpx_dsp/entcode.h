@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include <stddef.h>
 # include <stdint.h>
 
+#define OD_ENABLE_ASSERTIONS (1)
 #define DAALA_ENTROPY_CODER (1)
 
 /*Enable special features for gcc and compatible compilers.*/
