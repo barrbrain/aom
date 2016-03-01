@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "./entcode.h"
 #include "./prob.h"
 
 const uint8_t vpx_norm[256] = {
@@ -59,79 +60,151 @@ void vpx_tree_merge_probs(const vpx_tree_index *tree, const vpx_prob *pre_probs,
   (byte & 0x02 ? 1 : 0), \
   (byte & 0x01 ? 1 : 0)
 
-/* Compute the Q15 CDF of a binary tree with given internal node probabilities.
-   The number of symbols in the CDF is capped at 16 and when the number of leaf
-    nodes is greater than 16 the resulting CDF will contain both internal and
-    leaf nodes (internal nodes will be split in order of highest probability
-    first).
-   The vpx_tree_index for each node in the CDF will be in ind[] as well as the
-    set of decisions that lead to that entry in pth[] with its length in len[].
-   The return value is the number of symbols in the CDF. */
+typedef struct tree_node tree_node;
+
+struct tree_node {
+  vpx_tree_index index;
+  uint8_t probs[16];
+  uint8_t prob;
+  int path;
+  int len;
+  int l;
+  int r;
+  uint16_t pdf;
+};
+
+/* Compute the probability of this node in Q23 */
+static uint32_t tree_node_prob(tree_node n, int i) {
+  uint32_t prob;
+  /* 1.0 in Q23 */
+  prob = 16777216;
+  for (; i < n.len; i++) {
+    prob = prob*n.probs[i] >> 8;
+  }
+  return prob;
+}
+
+static int tree_node_cmp(tree_node a, tree_node b) {
+  int i;
+  uint32_t pa;
+  uint32_t pb;
+  for (i = 0; i < OD_MINI(a.len, b.len) && a.probs[i] == b.probs[i]; i++);
+  pa = tree_node_prob(a, i);
+  pb = tree_node_prob(b, i);
+  return pa > pb ? 1 : pa < pb ? -1 : 0;
+}
+
+static uint16_t tree_node_compute_probs(tree_node *tree, int n, uint16_t pdf) {
+  /* Leaf node */
+  if (tree[n].l == 0) {
+    if (pdf == 0) pdf = 1;
+    tree[n].pdf = pdf;
+    return pdf;
+  }
+  /* Interior node */
+  else {
+    /* Process the smaller probability first */
+    if (tree[n].prob < 128) {
+      uint16_t lp;
+      uint16_t rp;
+      lp = (((uint32_t)pdf)*tree[n].prob + 128) >> 8;
+      lp = tree_node_compute_probs(tree, tree[n].l, lp);
+      rp = tree_node_compute_probs(tree, tree[n].r, pdf - lp);
+      return lp + rp;
+    }
+    else {
+      uint16_t rp;
+      uint16_t lp;
+      rp = (((uint32_t)pdf)*(256 - tree[n].prob) + 128) >> 8;
+      rp = tree_node_compute_probs(tree, tree[n].r, rp);
+      lp = tree_node_compute_probs(tree, tree[n].l, pdf - rp);
+      return lp + rp;
+    }
+  }
+}
+
+static int tree_node_extract(tree_node *tree, int n, int symb,
+ uint16_t *pdf, vpx_tree_index *index, int *path, int *len) {
+  /* Leaf node */
+  if (tree[n].l == 0) {
+    pdf[symb] = tree[n].pdf;
+    index[symb] = tree[n].index;
+    path[symb] = tree[n].path;
+    len[symb] = tree[n].len;
+    return symb + 1;
+  }
+  /* Interior node */
+  else {
+    symb = tree_node_extract(tree, tree[n].l, symb, pdf, index, path, len);
+    return tree_node_extract(tree, tree[n].r, symb, pdf, index, path, len);
+  }
+}
+
 int tree_to_cdf(const vpx_tree_index *tree, const vpx_prob *probs,
- vpx_tree_index root, uint16_t *cdf, vpx_tree_index *ind, int *pth, int *len) {
-  int nsymbs;
-  uint16_t pdf[16];
+ vpx_tree_index root, uint16_t *cdf, vpx_tree_index *index, int *path,
+ int *len) {
+  tree_node symb[2*16-1];
+  int nodes;
   int next[16];
   int size;
+  int nsymbs;
   int i;
-  ind[0] = root;
-  pdf[0] = 32768;
-  pth[0] = 0;
-  len[0] = 0;
-  nsymbs = 1;
+  /* Create the root node with probability 1 in Q15. */
+  symb[0].index = root;
+  symb[0].path = 0;
+  symb[0].len = 0;
+  symb[0].l = symb[0].r = 0;
+  nodes = 1;
   next[0] = 0;
   size = 1;
+  nsymbs = 1;
   while (size > 0 && nsymbs < 16) {
     int m;
+    tree_node n;
     vpx_tree_index j;
-    uint16_t prob;
-    int path;
-    int bits;
-    /* Find the internal node with the largest probability. */
+    uint8_t prob;
     m = 0;
-    for (i = 1; i < size; i++) if (pdf[next[i]] > pdf[next[m]]) m = i;
+    /* Find the internal node with the largest probability. */
+    for (i = 1; i < size; i++) {
+      if (tree_node_cmp(symb[next[i]], symb[next[m]]) > 0) m = i;
+    }
     i = next[m];
     memmove(&next[m], &next[m + 1], sizeof(*next)*(size - (m + 1)));
     size--;
-    for (m = 0; m < size; m++) if (next[m] > i) next[m]++;
-    /* Split this symbol into two symbols. */
-    prob = pdf[i];
-    j = ind[i];
-    path = pth[i];
-    bits = len[i];
-    fprintf(stderr, "node.index = %i\n", j);
-    fprintf(stderr, "node.prob = %i\n", prob);
-    fprintf(stderr, "probs[%i] = %i\n", j >> 1, probs[j >> 1]);
-    memmove(&pdf[i + 1], &pdf[i], sizeof(*pdf)*(nsymbs - i));
-    memmove(&ind[i + 1], &ind[i], sizeof(*ind)*(nsymbs - i));
-    memmove(&pth[i + 1], &pth[i], sizeof(*pth)*(nsymbs - i));
-    memmove(&len[i + 1], &len[i], sizeof(*len)*(nsymbs - i));
+    /* Split this symbol into two symbols */
+    n = symb[i];
+    j = n.index;
+    prob = probs[j >> 1];
+    /* Left */
+    n.index = tree[j];
+    n.path <<= 1;
+    n.len++;
+    n.probs[n.len - 1] = prob;
+    symb[nodes] = n;
+    if (n.index > 0) {
+      next[size++] = nodes;
+    }
+    /* Right */
+    n.index = tree[j + 1];
+    n.path += 1;
+    n.probs[n.len - 1] = 256 - prob;
+    symb[nodes + 1] = n;
+    if (n.index > 0) {
+      next[size++] = nodes + 1;
+    }
+    symb[i].prob = prob;
+    symb[i].l = nodes;
+    symb[i].r = nodes + 1;
+    nodes += 2;
     nsymbs++;
-    ind[i] = tree[j];
-    pth[i] = (path << 1) + 0;
-    len[i] = bits + 1;
-    pdf[i] = ((prob*((uint32_t)probs[j >> 1] << 7)) + (1 << (15 - 1))) >> 15;
-    ind[i + 1] = tree[j + 1];
-    pth[i + 1] = (path << 1) + 1;
-    len[i + 1] = bits + 1;
-    pdf[i + 1] = prob - pdf[i];
-    /* Queue any new internal nodes. */
-    if (ind[i] > 0) {
-      next[size++] = i;
-    }
-    if (ind[i + 1] > 0) {
-      next[size++] = i + 1;
-    }
-    fprintf(stderr, "nsymbs = %i\n", nsymbs);
-    for (i = 0; i < nsymbs; i++) {
-      fprintf(stderr, "%i %i:" BYTETOBINARYPATTERN " %i %i\n", ind[i], pth[i],
-       BYTETOBINARY(pth[i]), len[i], pdf[i]);
-    }
-    fprintf(stderr, "---------------------\n");
   }
-  cdf[0] = pdf[0];
+  /* Compute the probabilities of each symbol in Q15 */
+  tree_node_compute_probs(symb, 0, 32768);
+  /* Extract the cdf, index, path and length */
+  tree_node_extract(symb, 0, 0, cdf, index, path, len);
+  /* Convert to CDF */
   for (i = 1; i < nsymbs; i++) {
-    cdf[i] = cdf[i - 1] + pdf[i];
+    cdf[i] = cdf[i - 1] + cdf[i];
   }
   return nsymbs;
 }

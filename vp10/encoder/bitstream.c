@@ -235,9 +235,15 @@ static void pack_mb_tokens(vpx_writer *w, TOKENEXTRA **tp,
       int len = UNCONSTRAINED_NODES - p->skip_eob_node;
       int bits = v >> (n - len);
       vp10_write_tree(w, vp10_coef_tree, p->context_tree, bits, len, i);
+#if DAALA_ENTROPY_CODER
+      daala_write_tree(w, vp10_coef_con_tree,
+                       vp10_pareto8_full[p->context_tree[PIVOT_NODE] - 1], v & ((1 << (n - len)) - 1),
+                       n - len, 0);
+#else
       vp10_write_tree(w, vp10_coef_con_tree,
                       vp10_pareto8_full[p->context_tree[PIVOT_NODE] - 1], v,
                       n - len, 0);
+#endif
     } else {
       vp10_write_tree(w, vp10_coef_tree, p->context_tree, v, n, i);
     }
