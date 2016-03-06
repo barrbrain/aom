@@ -30,6 +30,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # include "accounting.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct od_ec_dec od_ec_dec;
 
 #if OD_ACCOUNTING
@@ -115,5 +119,9 @@ OD_WARN_UNUSED_RESULT uint32_t od_ec_dec_bits_(od_ec_dec *dec,
 
 OD_WARN_UNUSED_RESULT int od_ec_dec_tell(od_ec_dec *dec) OD_ARG_NONNULL(1);
 uint32_t od_ec_dec_tell_frac(od_ec_dec *dec) OD_ARG_NONNULL(1);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif

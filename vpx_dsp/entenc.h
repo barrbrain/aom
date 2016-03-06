@@ -26,6 +26,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 # define _entenc_H (1)
 # include <stddef.h>
 # include "entcode.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct od_ec_enc od_ec_enc;
 
 #define OD_MEASURE_EC_OVERHEAD (0)
@@ -101,5 +106,9 @@ OD_WARN_UNUSED_RESULT uint32_t od_ec_enc_tell_frac(od_ec_enc *enc)
 
 void od_ec_enc_checkpoint(od_ec_enc *dst, const od_ec_enc *src);
 void od_ec_enc_rollback(od_ec_enc *dst, const od_ec_enc *src);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif
 
 #endif
