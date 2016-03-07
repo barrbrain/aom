@@ -371,7 +371,7 @@ static void temporal_filter_iterate_c(VP10_COMP *cpi,
         byte = mb_y_offset;
         for (i = 0, k = 0; i < 16; i++) {
           for (j = 0; j < 16; j++, k++) {
-            dst1_16[byte] = (uint16_t)OD_DIVU(accumulator[k], count[k]);
+            dst1_16[byte] = (uint16_t)OD_DIVU(accumulator[k] + (count[k] >> 1), count[k]);
 
             // move to next pixel
             byte++;
@@ -391,10 +391,10 @@ static void temporal_filter_iterate_c(VP10_COMP *cpi,
             int m = k + 256;
 
             // U
-            dst1_16[byte] = (uint16_t)OD_DIVU(accumulator[k], count[k]);
+            dst1_16[byte] = (uint16_t)OD_DIVU(accumulator[k] + (count[k] >> 1), count[k]);
 
             // V
-            dst2_16[byte] = (uint16_t)OD_DIVU(accumulator[m], count[m]);
+            dst2_16[byte] = (uint16_t)OD_DIVU(accumulator[m] + (count[m] >> 1), count[m]);
 
             // move to next pixel
             byte++;
@@ -409,7 +409,7 @@ static void temporal_filter_iterate_c(VP10_COMP *cpi,
         byte = mb_y_offset;
         for (i = 0, k = 0; i < 16; i++) {
           for (j = 0; j < 16; j++, k++) {
-            dst1[byte] = (uint8_t)OD_DIVU(accumulator[k], count[k]);
+            dst1[byte] = (uint8_t)OD_DIVU(accumulator[k] + (count[k] >> 1), count[k]);
 
             // move to next pixel
             byte++;
@@ -426,10 +426,10 @@ static void temporal_filter_iterate_c(VP10_COMP *cpi,
             int m = k + 256;
 
             // U
-            dst1[byte] = (uint8_t)OD_DIVU(accumulator[k], count[k]);
+            dst1[byte] = (uint8_t)OD_DIVU(accumulator[k] + (count[k] >> 1), count[k]);
 
             // V
-            dst2[byte] = (uint8_t)OD_DIVU(accumulator[m], count[m]);
+            dst2[byte] = (uint8_t)OD_DIVU(accumulator[m] + (count[m] >> 1), count[m]);
 
             // move to next pixel
             byte++;
@@ -444,7 +444,7 @@ static void temporal_filter_iterate_c(VP10_COMP *cpi,
       byte = mb_y_offset;
       for (i = 0, k = 0; i < 16; i++) {
         for (j = 0; j < 16; j++, k++) {
-          dst1[byte] = (uint8_t)OD_DIVU(accumulator[k], count[k]);
+          dst1[byte] = (uint8_t)OD_DIVU(accumulator[k] + (count[k] >> 1), count[k]);
 
           // move to next pixel
           byte++;
@@ -461,10 +461,10 @@ static void temporal_filter_iterate_c(VP10_COMP *cpi,
           int m = k + 256;
 
           // U
-          dst1[byte] = (uint8_t)OD_DIVU(accumulator[k], count[k]);
+          dst1[byte] = (uint8_t)OD_DIVU(accumulator[k] + (count[k] >> 1), count[k]);
 
           // V
-          dst2[byte] = (uint8_t)OD_DIVU(accumulator[m], count[m]);
+          dst2[byte] = (uint8_t)OD_DIVU(accumulator[m] + (count[m] >> 1), count[m]);
 
           // move to next pixel
           byte++;
