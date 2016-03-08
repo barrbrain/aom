@@ -43,7 +43,8 @@ static INLINE void vpx_write(vpx_writer *br, int bit, int probability) {
     od_ec_enc_bits(&br->ec, bit, 1);
   }
   else {
-    od_ec_encode_bool_q15(&br->ec, bit, ec_norm[probability]);
+    uint16_t p = (32768U*probability + (256 - probability)) >> CHAR_BIT;
+    od_ec_encode_bool_q15(&br->ec, bit, p);
   }
 #else
   unsigned int split;

@@ -83,7 +83,8 @@ static INLINE int vpx_read(vpx_reader *r, int prob) {
     return od_ec_dec_bits(&r->ec, 1, "vpx_bits");
   }
   else {
-    return od_ec_decode_bool_q15(&r->ec, ec_norm[prob], "vpx");
+    uint16_t p = (32768U*prob + (256 - prob)) >> CHAR_BIT;
+    return od_ec_decode_bool_q15(&r->ec, p, "vpx");
   }
 #else
   unsigned int bit = 0;
