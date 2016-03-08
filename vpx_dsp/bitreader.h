@@ -78,11 +78,12 @@ static INLINE int vpx_reader_has_error(vpx_reader *r) {
 
 static INLINE int vpx_read(vpx_reader *r, int prob) {
 #if CONFIG_DAALA_EC
+  OD_ASSERT(prob >= 0 && prob < 256);
   if (prob == 128) {
     return od_ec_dec_bits(&r->ec, 1, "vpx_bits");
   }
   else {
-    return od_ec_decode_bool_q15(&r->ec, prob << 7, "vpx");
+    return od_ec_decode_bool_q15(&r->ec, ec_norm[prob], "vpx");
   }
 #else
   unsigned int bit = 0;

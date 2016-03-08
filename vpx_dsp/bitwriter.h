@@ -38,11 +38,12 @@ void vpx_stop_encode(vpx_writer *bc);
 
 static INLINE void vpx_write(vpx_writer *br, int bit, int probability) {
 #if CONFIG_DAALA_EC
+  OD_ASSERT(probability >= 0 && probability < 256);
   if (probability == 128) {
     od_ec_enc_bits(&br->ec, bit, 1);
   }
   else {
-    od_ec_encode_bool_q15(&br->ec, bit, probability << 7);
+    od_ec_encode_bool_q15(&br->ec, bit, ec_norm[probability]);
   }
 #else
   unsigned int split;
