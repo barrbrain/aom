@@ -1,10 +1,15 @@
 #ifndef VP10_COMMON_ODINTRIN_H_
 #define VP10_COMMON_ODINTRIN_H_
 
+#include <math.h>
 #include "vp10/common/enums.h"
 #include "vpx/vpx_integer.h"
 #include "vpx_dsp/vpx_dsp_common.h"
 #include "vpx_ports/bitops.h"
+
+# if !defined(M_LOG2E)
+#  define M_LOG2E (1.4426950408889634073599246810019)
+# endif
 
 /*Smallest blocks are 4x4*/
 # define OD_LOG_BSIZE0 (2)
@@ -32,5 +37,7 @@ typedef int16_t od_dering_in;
    we have to special-case it.
   We define a special version of the macro to use when x can be zero.*/
 # define OD_ILOG(x) ((x) ? OD_ILOG_NZ(x) : 0)
+
+# define OD_LOG2(x) (M_LOG2E*log(x))
 
 #endif

@@ -11,9 +11,13 @@
 #ifndef VPX_DSP_BITWRITER_H_
 #define VPX_DSP_BITWRITER_H_
 
+#include <assert.h>
+#include "vp10/common/odintrin.h"
 #include "vpx_ports/mem.h"
 
 #include "vpx_dsp/prob.h"
+
+#define VPX_MEASURE_EC_OVERHEAD (0)
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +29,10 @@ typedef struct vpx_writer {
   int count;
   unsigned int pos;
   uint8_t *buffer;
+#if VPX_MEASURE_EC_OVERHEAD
+  double entropy;
+  int nb_symbols;
+#endif
 } vpx_writer;
 
 void vpx_start_encode(vpx_writer *bc, uint8_t *buffer);
@@ -76,6 +84,11 @@ static INLINE void vpx_write(vpx_writer *br, int bit, int probability) {
   br->count = count;
   br->lowvalue = lowvalue;
   br->range = range;
+#if VPX_MEASURE_EC_OVERHEAD
+  assert(probability > 0 && probability < 256);
+  br->entropy -= OD_LOG2((double)(bit ? 256 - probability : probability)/256.0);
+  br->nb_symbols++;
+#endif
 }
 
 static INLINE void vpx_write_bit(vpx_writer *w, int bit) {
