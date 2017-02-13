@@ -93,9 +93,11 @@ void aom_iwht4x4_1_add_c(const tran_low_t *in, uint8_t *dest, int dest_stride) {
   }
 }
 
+#if !CONFIG_DAALA_TX
 void aom_idct4_c(const tran_low_t *input, tran_low_t *output) {
   tran_low_t step[4];
   tran_high_t temp1, temp2;
+
   // stage 1
   temp1 = (input[0] + input[2]) * cospi_16_64;
   temp2 = (input[0] - input[2]) * cospi_16_64;
@@ -112,6 +114,72 @@ void aom_idct4_c(const tran_low_t *input, tran_low_t *output) {
   output[2] = WRAPLOW(step[1] - step[2]);
   output[3] = WRAPLOW(step[0] - step[3]);
 }
+
+#else
+
+/*This is the strength reduced version of ((_a)/(1 << (_b))).
+  This will not work for _b == 0, however currently this is only used for
+   b == 1 anyway.*/
+# define OD_UNBIASED_RSHIFT32(_a, _b) \
+ (((int32_t)(((uint32_t)(_a) >> (32 - (_b))) + (_a))) >> (_b))
+
+# define OD_DCT_RSHIFT(_a, _b) OD_UNBIASED_RSHIFT32(_a, _b)
+
+#define OD_DCT_OVERFLOW_CHECK(val, scale, offset, idx)
+
+#define OD_IDCT_2_ASYM(p0, p1, p1h) \
+  /* Embedded 2-point asymmetric Type-II iDCT. */ \
+  do { \
+    p1 = p0 - p1; \
+    p1h = OD_DCT_RSHIFT(p1, 1); \
+    p0 -= p1h; \
+  } \
+  while (0)
+
+#define OD_IDST_2_ASYM(p0, p1) \
+  /* Embedded 2-point asymmetric Type-IV iDST. */ \
+  do { \
+    /* 4573/4096 ~= 4*Sin[Pi/8] - Tan[Pi/8] ~= 1.11652016708726 */ \
+    p0 += (p1*4573 + 2048) >> 12; \
+    /* 669/1024 ~= Cos[Pi/8]/Sqrt[2] ~= 0.653281482438188 */ \
+    p1 -= (p0*669 + 512) >> 10; \
+    /* 11507/16384 ~= 4*Sin[Pi/8] - 2*Tan[Pi/8] ~= 0.702306604714169 */ \
+    p0 += (p1*11507 + 8192) >> 14; \
+  } \
+  while (0)
+
+#define OD_IDCT_4(q0, q2, q1, q3) \
+  /* Embedded 4-point orthonormal Type-II iDCT. */ \
+  do { \
+    int q1h; \
+    int q3h; \
+    OD_IDST_2_ASYM(q3, q2); \
+    OD_IDCT_2_ASYM(q0, q1, q1h); \
+    q3h = OD_DCT_RSHIFT(q3, 1); \
+    q0 += q3h; \
+    q3 = q0 - q3; \
+    q2 = q1h - q2; \
+    q1 -= q2; \
+  } \
+  while (0)
+
+void aom_idct4_c(const tran_low_t *y, tran_low_t *x) {
+  int t0;
+  int t1;
+  int t2;
+  int t3;
+  t0 = y[0];
+  t2 = y[1];
+  t1 = y[2];
+  t3 = y[3];
+  OD_IDCT_4(t0, t2, t1, t3);
+  x[0] = t0;
+  x[1] = t1;
+  x[2] = t2;
+  x[3] = t3;
+}
+
+#endif
 
 void aom_idct4x4_16_add_c(const tran_low_t *input, uint8_t *dest, int stride) {
   tran_low_t out[4 * 4];
@@ -131,8 +199,13 @@ void aom_idct4x4_16_add_c(const tran_low_t *input, uint8_t *dest, int stride) {
     for (j = 0; j < 4; ++j) temp_in[j] = out[j * 4 + i];
     aom_idct4_c(temp_in, temp_out);
     for (j = 0; j < 4; ++j) {
+#if CONFIG_DAALA_TX
+      dest[j * stride + i] = clip_pixel_add(dest[j * stride + i],
+                                            ROUND_POWER_OF_TWO(temp_out[j], 3));
+#else
       dest[j * stride + i] = clip_pixel_add(dest[j * stride + i],
                                             ROUND_POWER_OF_TWO(temp_out[j], 4));
+#endif
     }
   }
 }
@@ -244,6 +317,7 @@ void aom_idct8x8_1_add_c(const tran_low_t *input, uint8_t *dest, int stride) {
   }
 }
 
+#if !CONFIG_DAALA_TX
 void aom_iadst4_c(const tran_low_t *input, tran_low_t *output) {
   tran_high_t s0, s1, s2, s3, s4, s5, s6, s7;
 
@@ -280,6 +354,61 @@ void aom_iadst4_c(const tran_low_t *input, tran_low_t *output) {
   output[2] = WRAPLOW(dct_const_round_shift(s2));
   output[3] = WRAPLOW(dct_const_round_shift(s0 + s1 - s3));
 }
+
+#else
+
+#define OD_IDST_4(q0, q2, q1, q3) \
+  /* Embedded 4-point orthonormal Type-IV iDST. */ \
+  do { \
+    int q0h; \
+    int q2h; \
+    /* 4277/8192 ~= (1/Sqrt[2] - Cos[7*Pi/16])/Sin[7*Pi/16] ~=
+        0.52204745462729 */ \
+    q3 -= (q0*4277 + 4096) >> 13; \
+    /* 5681/4096 ~= Sqrt[2]*Sin[7*Pi/16] ~= 1.38703984532215 */ \
+    q0 += (q3*5681 + 2048) >> 12; \
+    /* 5091/8192 ~= (1/Sqrt[2] - Cos[7*Pi/16]/2)/Sin[7*Pi/16] ~=
+        0.6215036383171189 */ \
+    q3 -= (q0*5091 + 4096) >> 13; \
+    /* 7335/32768 ~= (1/Sqrt[2] - Cos[3*Pi/16])/Sin[3*Pi/16] ~=
+        0.223847182092655 */ \
+    q1 -= (q2*7335 + 16384) >> 15; \
+    /* 1609/2048 ~= Sqrt[2]*Sin[3*Pi/16] ~= 0.785694958387102 */ \
+    q2 -= (q1*1609 + 1024) >> 11; \
+    /* 537/1024 ~= (1/Sqrt[2] - Cos[3*Pi/16]/2)/Sin[3*Pi/16] ~=
+        0.524455699240090 */ \
+    q1 += (q2*537 + 512) >> 10; \
+    q2h = OD_DCT_RSHIFT(q2, 1); \
+    q3 += q2h; \
+    q2 -= q3; \
+    q0h = OD_DCT_RSHIFT(q0, 1); \
+    q1 = q0h - q1; \
+    q0 -= q1; \
+    /* 3393/8192 ~= Tan[Pi/8] ~= 0.414213562373095 */ \
+    q1 -= (q2*3393 + 4096) >> 13; \
+    /* 5793/8192 ~= Sin[Pi/4] ~= 0.707106781186547 */ \
+    q2 += (q1*5793 + 4096) >> 13; \
+    /* 13573/32768 ~= Tan[Pi/8] ~= 0.414213562373095 */ \
+    q1 -= (q2*13573 + 16384) >> 15; \
+  } \
+  while (0)
+
+void aom_iadst4_c(const tran_low_t *y, tran_low_t *x) {
+  int t0;
+  int t1;
+  int t2;
+  int t3;
+  t0 = y[0];
+  t2 = y[1];
+  t1 = y[2];
+  t3 = y[3];
+  OD_IDST_4(t0, t2, t1, t3);
+  x[0] = -t3;
+  x[1] = t2;
+  x[2] = -t1;
+  x[3] = t0;
+}
+#endif
 
 void aom_iadst8_c(const tran_low_t *input, tran_low_t *output) {
   int s0, s1, s2, s3, s4, s5, s6, s7;
