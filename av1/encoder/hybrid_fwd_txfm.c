@@ -57,49 +57,77 @@ static void fwd_txfm_4x4(const int16_t *src_diff, tran_low_t *coeff,
     av1_fwd_idtx_c(src_diff, coeff, diff_stride, 4, tx_type);
   else
 #endif
+#if CONFIG_DAALA_TX
+    av1_fht4x4_c(src_diff, coeff, diff_stride, tx_type);
+#else
     av1_fht4x4(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_4x8(const int16_t *src_diff, tran_low_t *coeff,
                          int diff_stride, TX_TYPE tx_type,
                          FWD_TXFM_OPT fwd_txfm_opt) {
   (void)fwd_txfm_opt;
+#if CONFIG_DAALA_TX
+  av1_fht4x8_c(src_diff, coeff, diff_stride, tx_type);
+#else
   av1_fht4x8(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_8x4(const int16_t *src_diff, tran_low_t *coeff,
                          int diff_stride, TX_TYPE tx_type,
                          FWD_TXFM_OPT fwd_txfm_opt) {
   (void)fwd_txfm_opt;
+#if CONFIG_DAALA_TX
+  av1_fht8x4_c(src_diff, coeff, diff_stride, tx_type);
+#else
   av1_fht8x4(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_8x16(const int16_t *src_diff, tran_low_t *coeff,
                           int diff_stride, TX_TYPE tx_type,
                           FWD_TXFM_OPT fwd_txfm_opt) {
   (void)fwd_txfm_opt;
+#if CONFIG_DAALA_TX
+  av1_fht8x16_c(src_diff, coeff, diff_stride, tx_type);
+#else
   av1_fht8x16(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_16x8(const int16_t *src_diff, tran_low_t *coeff,
                           int diff_stride, TX_TYPE tx_type,
                           FWD_TXFM_OPT fwd_txfm_opt) {
   (void)fwd_txfm_opt;
+#if CONFIG_DAALA_TX
+  av1_fht16x8_c(src_diff, coeff, diff_stride, tx_type);
+#else
   av1_fht16x8(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_16x32(const int16_t *src_diff, tran_low_t *coeff,
                            int diff_stride, TX_TYPE tx_type,
                            FWD_TXFM_OPT fwd_txfm_opt) {
   (void)fwd_txfm_opt;
+#if CONFIG_DAALA_TX
+  av1_fht16x32_c(src_diff, coeff, diff_stride, tx_type);
+#else
   av1_fht16x32(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_32x16(const int16_t *src_diff, tran_low_t *coeff,
                            int diff_stride, TX_TYPE tx_type,
                            FWD_TXFM_OPT fwd_txfm_opt) {
   (void)fwd_txfm_opt;
+#if CONFIG_DAALA_TX
+  av1_fht32x16_c(src_diff, coeff, diff_stride, tx_type);
+#else
   av1_fht32x16(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_8x8(const int16_t *src_diff, tran_low_t *coeff,
@@ -111,7 +139,11 @@ static void fwd_txfm_8x8(const int16_t *src_diff, tran_low_t *coeff,
     av1_fwd_idtx_c(src_diff, coeff, diff_stride, 8, tx_type);
   else
 #endif
+#if CONFIG_DAALA_EC
+    av1_fht8x8_c(src_diff, coeff, diff_stride, tx_type);
+#else
     av1_fht8x8(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_16x16(const int16_t *src_diff, tran_low_t *coeff,
@@ -123,7 +155,11 @@ static void fwd_txfm_16x16(const int16_t *src_diff, tran_low_t *coeff,
     av1_fwd_idtx_c(src_diff, coeff, diff_stride, 16, tx_type);
   else
 #endif
+#if CONFIG_DAALA_TX
+    av1_fht16x16_c(src_diff, coeff, diff_stride, tx_type);
+#else
     av1_fht16x16(src_diff, coeff, diff_stride, tx_type);
+#endif
 }
 
 static void fwd_txfm_32x32(const int16_t *src_diff, tran_low_t *coeff,
