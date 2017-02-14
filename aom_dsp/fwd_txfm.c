@@ -92,6 +92,9 @@ void aom_fdct4x4_1_c(const int16_t *input, tran_low_t *output, int stride) {
 }
 
 void aom_fdct8x8_c(const int16_t *input, tran_low_t *final_output, int stride) {
+#if CONFIG_DAALA_TX
+  assert(0);
+#endif
   int i, j;
   tran_low_t intermediate[64];
   int pass;
