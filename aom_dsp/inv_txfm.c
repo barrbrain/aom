@@ -535,7 +535,7 @@ void aom_iadst4_c(const tran_low_t *y, tran_low_t *x) {
 }
 #endif
 
-#if !CONFIG_DAALA_TX
+#if !(0 && CONFIG_DAALA_TX)
 void aom_iadst8_c(const tran_low_t *input, tran_low_t *output) {
   int s0, s1, s2, s3, s4, s5, s6, s7;
 

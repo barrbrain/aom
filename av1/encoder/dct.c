@@ -1037,7 +1037,7 @@ void fadst4(const tran_low_t *x, tran_low_t *y) {
 
 #endif
 
-#if !CONFIG_DAALA_TX
+#if !(0 && CONFIG_DAALA_TX)
 void fadst8(const tran_low_t *input, tran_low_t *output) {
   tran_high_t s0, s1, s2, s3, s4, s5, s6, s7;
 
