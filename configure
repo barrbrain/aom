@@ -288,6 +288,7 @@ EXPERIMENT_LIST="
     rawbits
     pvq
     xiphrc
+    daala_tx
     cb4x4
     frame_size
     delta_q

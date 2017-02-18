@@ -787,7 +787,7 @@ int av1_is_intra_filter_switchable(int angle);
 #endif  // CONFIG_INTRA_INTERP
 #endif  // CONFIG_EXT_INTRA
 
-#if CONFIG_EXT_TILE
+#if CONFIG_EXT_TILE || 1
 #define FIXED_TX_TYPE 1
 #else
 #define FIXED_TX_TYPE 0
