@@ -340,10 +340,12 @@ void av1_iht4x4_16_add_c(const tran_low_t *input, uint8_t *dest, int stride,
 #if CONFIG_DCT_ONLY
   assert(tx_type == DCT_DCT);
 #endif
+#if !CONFIG_DAALA_DCT4
   if (tx_type == DCT_DCT) {
     aom_idct4x4_16_add(input, dest, stride);
     return;
   }
+#endif
   static const transform_2d IHT_4[] = {
     { aom_idct4_c, aom_idct4_c },    // DCT_DCT  = 0
     { aom_iadst4_c, aom_idct4_c },   // ADST_DCT = 1
@@ -367,13 +369,19 @@ void av1_iht4x4_16_add_c(const tran_low_t *input, uint8_t *dest, int stride,
 
   int i, j;
   tran_low_t tmp;
+  tran_low_t in_temp[4];
   tran_low_t out[4][4];
   tran_low_t *outp = &out[0][0];
   int outstride = 4;
 
   // inverse transform row vectors
   for (i = 0; i < 4; ++i) {
+#if CONFIG_DAALA_DCT4 && CONFIG_DCT_ONLY
+    for (j = 0; j < 4; j++) temp_in[j] = input[j] << 1;
+    IHT_4[tx_type].rows(temp_in, out[i]);
+#else
     IHT_4[tx_type].rows(input, out[i]);
+#endif
     input += 4;
   }
 
@@ -400,7 +408,11 @@ void av1_iht4x4_16_add_c(const tran_low_t *input, uint8_t *dest, int stride,
     for (j = 0; j < 4; ++j) {
       int d = i * stride + j;
       int s = j * outstride + i;
+#if CONFIG_DAALA_DCT4 && CONFIG_DCT_ONLY
       dest[d] = clip_pixel_add(dest[d], ROUND_POWER_OF_TWO(outp[s], 4));
+#else
+      dest[d] = clip_pixel_add(dest[d], ROUND_POWER_OF_TWO(outp[s], 4));
+#endif
     }
   }
 }
