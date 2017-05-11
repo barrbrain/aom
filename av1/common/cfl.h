@@ -38,7 +38,8 @@ typedef struct {
   double dc_pred[CFL_PRED_PLANES];
 
   // The rate associated with each alpha codeword
-  int costs[CFL_ALPHABET_SIZE];
+  int uvec_costs[CFL_ALPHABET_SIZE];
+  int mag_costs[CFL_ALPHABET_SIZE];
 
   // Count the number of TX blocks in a predicted block to know when you are at
   // the last one, so you can check for skips.
@@ -46,15 +47,47 @@ typedef struct {
   int num_tx_blk[CFL_PRED_PLANES];
 } CFL_CTX;
 
-static const double cfl_alpha_mags[CFL_MAGS_SIZE] = {
-  0., 0.125, -0.125, 0.25, -0.25, 0.5, -0.5
+// Q15 magnitudes used in the codebook
+static const int cfl_alpha_mags[CFL_MAGS_SIZE] = {
+  0,    512,   -512,  683,    -683,  1024,   -1024, 1365,  -1365,
+  2048, -2048, 2731,  -2731,  4096,  -4096,  5461,  -5461,
+  8192, -8192, 10923, -10923, 16384, -16384, 21845, -21845
 };
 
-static const int cfl_alpha_codes[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
-  // barrbrain's simple 1D quant ordered by subset 3 likelihood
-  { 0, 0 }, { 1, 1 }, { 3, 0 }, { 3, 1 }, { 1, 0 }, { 3, 3 },
-  { 0, 1 }, { 5, 5 }, { 5, 3 }, { 1, 3 }, { 5, 3 }, { 3, 5 },
-  { 0, 3 }, { 5, 1 }, { 1, 5 }, { 0, 5 }
+// vector codebook used to code the combination of alpha_u and alpha_v
+static const int cfl_alpha_codes[CFL_PRED_PLANES][CFL_ALPHABET_SIZE][CFL_ALPHABET_SIZE] = {
+  { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17, 20, 19, 22, 21 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17, 20, 19 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 } },
+  { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 10, 9, 12, 11, 14, 13, 16, 15, 18, 17, 20, 19, 22, 21, 24, 23 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17, 20, 19, 22, 21 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17, 20, 19 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15, 18, 17 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 },
+    { 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 },
+    { 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22 },
+    { 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 } }
 };
 
 void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
@@ -62,17 +95,10 @@ void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
 
 void cfl_dc_pred(MACROBLOCKD *xd, BLOCK_SIZE plane_bsize, TX_SIZE tx_size);
 
-static INLINE double cfl_idx_to_alpha(int alpha_idx, CFL_SIGN_TYPE alpha_sign,
+static INLINE double cfl_idx_to_alpha(int cfl_uvec_idx, int cfl_mag_idx,
                                       CFL_PRED_TYPE pred_type) {
-  const int mag_idx = cfl_alpha_codes[alpha_idx][pred_type];
-  const double abs_alpha = cfl_alpha_mags[mag_idx];
-  if (alpha_sign == CFL_SIGN_POS) {
-    return abs_alpha;
-  } else {
-    assert(abs_alpha != 0.0);
-    assert(cfl_alpha_mags[mag_idx + 1] == -abs_alpha);
-    return -abs_alpha;
-  }
+  const int idx = cfl_alpha_codes[pred_type][cfl_uvec_idx][cfl_mag_idx];
+  return cfl_alpha_mags[idx] * (1. / (1 << 15));
 }
 
 void cfl_predict_block(const CFL_CTX *cfl, uint8_t *dst, int dst_stride,

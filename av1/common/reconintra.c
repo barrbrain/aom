@@ -2517,8 +2517,7 @@ void av1_predict_intra_block_facade(MACROBLOCKD *xd, int plane, int block_idx,
     cfl_predict_block(
         xd->cfl, dst, pd->dst.stride, blk_row, blk_col, tx_size,
         xd->cfl->dc_pred[plane - 1],
-        cfl_idx_to_alpha(mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs[plane - 1],
-                         plane - 1));
+        cfl_idx_to_alpha(mbmi->cfl_uvec_idx, mbmi->cfl_mag_idx, plane - 1));
   }
 #endif
 }
