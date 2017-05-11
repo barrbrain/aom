@@ -1502,7 +1502,7 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
 
         // if SKIP is chosen at the block level, and ind != 0, we must change
         // the prediction
-        if (mbmi->cfl_alpha_idx != 0) {
+        if (mbmi->cfl_uvec_idx != 0) {
           const struct macroblockd_plane *const pd_cb = &xd->plane[AOM_PLANE_U];
           uint8_t *const dst_cb = pd_cb->dst.buf;
           const int dst_stride_cb = pd_cb->dst.stride;
@@ -1516,9 +1516,8 @@ void av1_encode_block_intra(int plane, int block, int blk_row, int blk_col,
                   (uint8_t)(xd->cfl->dc_pred[CFL_PRED_V] + 0.5);
             }
           }
-          mbmi->cfl_alpha_idx = 0;
-          mbmi->cfl_alpha_signs[CFL_PRED_U] = CFL_SIGN_POS;
-          mbmi->cfl_alpha_signs[CFL_PRED_V] = CFL_SIGN_POS;
+          mbmi->cfl_uvec_idx = 0;
+          mbmi->cfl_mag_idx = 0;
         }
       }
     }
@@ -1570,8 +1569,8 @@ static int cfl_alpha_dist(const uint8_t *y_pix, int y_stride, double y_avg,
 }
 
 static int cfl_compute_alpha_ind(MACROBLOCK *const x, const CFL_CTX *const cfl,
-                                 BLOCK_SIZE bsize, int *const cfl_cost,
-                                 CFL_SIGN_TYPE *signs) {
+                                 BLOCK_SIZE bsize, int *const cfl_uvec_cost,
+                                 int *const cfl_mag_cost, int *mag_out) {
   const struct macroblock_plane *const p_u = &x->plane[AOM_PLANE_U];
   const struct macroblock_plane *const p_v = &x->plane[AOM_PLANE_V];
   const uint8_t *const src_u = p_u->src.buf;
@@ -1599,41 +1598,42 @@ static int cfl_compute_alpha_ind(MACROBLOCK *const x, const CFL_CTX *const cfl,
   // Compute least squares parameter of the entire block
   // IMPORTANT: We assume that the first code is 0,0
   int ind = 0;
-  signs[CFL_PRED_U] = CFL_SIGN_POS;
-  signs[CFL_PRED_V] = CFL_SIGN_POS;
+  int mag = 0;
 
   dist = cfl_alpha_dist(tmp_pix, MAX_SB_SIZE, y_avg, src_u, src_stride_u,
                         block_width, block_height, dc_pred_u, 0, NULL) +
          cfl_alpha_dist(tmp_pix, MAX_SB_SIZE, y_avg, src_v, src_stride_v,
                         block_width, block_height, dc_pred_v, 0, NULL);
   dist *= 16;
-  best_cost = RDCOST(x->rdmult, x->rddiv, *cfl_cost, dist);
+  best_cost = RDCOST(x->rdmult, x->rddiv, *cfl_uvec_cost, dist);
 
   for (int c = 1; c < CFL_ALPHABET_SIZE; c++) {
-    dist_u = cfl_alpha_dist(tmp_pix, MAX_SB_SIZE, y_avg, src_u, src_stride_u,
-                            block_width, block_height, dc_pred_u,
-                            cfl_alpha_codes[c][CFL_PRED_U], &dist_u_neg);
-    dist_v = cfl_alpha_dist(tmp_pix, MAX_SB_SIZE, y_avg, src_v, src_stride_v,
-                            block_width, block_height, dc_pred_v,
-                            cfl_alpha_codes[c][CFL_PRED_V], &dist_v_neg);
-    for (int sign_u = cfl_alpha_codes[c][CFL_PRED_U] == 0.0; sign_u < CFL_SIGNS;
-         sign_u++) {
-      for (int sign_v = cfl_alpha_codes[c][CFL_PRED_V] == 0.0;
-           sign_v < CFL_SIGNS; sign_v++) {
-        dist = (sign_u == CFL_SIGN_POS ? dist_u : dist_u_neg) +
-               (sign_v == CFL_SIGN_POS ? dist_v : dist_v_neg);
+    for (int m = 0; m < CFL_ALPHABET_SIZE; m += 2) {
+      const double alpha_u = cfl_idx_to_alpha(c, m, CFL_PRED_U);
+      const double alpha_v = cfl_idx_to_alpha(c, m, CFL_PRED_V);
+      dist_u = cfl_alpha_dist(tmp_pix, MAX_SB_SIZE, y_avg, src_u, src_stride_u,
+                              block_width, block_height, dc_pred_u, alpha_u,
+                              &dist_u_neg);
+      dist_v = cfl_alpha_dist(tmp_pix, MAX_SB_SIZE, y_avg, src_v, src_stride_v,
+                              block_width, block_height, dc_pred_v, alpha_v,
+                              &dist_v_neg);
+      for (int sign = CFL_SIGN_NEG; sign < CFL_SIGNS; sign++) {
+        const int rate =
+            cfl_uvec_cost[c] + cfl_mag_cost[sign == CFL_SIGN_POS ? m : m + 1];
+        dist = (sign == CFL_SIGN_POS ? dist_u : dist_u_neg) +
+               (sign == CFL_SIGN_POS ? dist_v : dist_v_neg);
         dist *= 16;
-        cost = RDCOST(x->rdmult, x->rddiv, cfl_cost[c], dist);
+        cost = RDCOST(x->rdmult, x->rddiv, rate, dist);
         if (cost < best_cost) {
           best_cost = cost;
           ind = c;
-          signs[CFL_PRED_U] = sign_u;
-          signs[CFL_PRED_V] = sign_v;
+          mag = sign == CFL_SIGN_POS ? m : m + 1;
         }
       }
     }
   }
 
+  *mag_out = mag;
   return ind;
 }
 
@@ -1646,23 +1646,27 @@ void av1_predict_intra_block_encoder_facade(MACROBLOCK *x,
   MB_MODE_INFO *mbmi = &xd->mi[0]->mbmi;
   if (plane != AOM_PLANE_Y && mbmi->uv_mode == DC_PRED) {
     if (blk_col == 0 && blk_row == 0 && plane == AOM_PLANE_U) {
-      assert(ec_ctx->cfl_alpha_cdf[CFL_ALPHABET_SIZE - 1] ==
+      assert(ec_ctx->cfl_uvec_cdf[CFL_ALPHABET_SIZE - 1] ==
+             AOM_ICDF(CDF_PROB_TOP));
+      assert(ec_ctx->cfl_mag_cdf[CFL_ALPHABET_SIZE - 1] ==
              AOM_ICDF(CDF_PROB_TOP));
       const int prob_den = CDF_PROB_TOP;
 
       CFL_CTX *const cfl = xd->cfl;
-      int cfl_costs[CFL_ALPHABET_SIZE];
+      int cfl_uvec_costs[CFL_ALPHABET_SIZE];
+      int cfl_mag_costs[CFL_ALPHABET_SIZE];
       for (int c = 0; c < CFL_ALPHABET_SIZE; c++) {
-        int sign_bit_cost = (cfl_alpha_codes[c][CFL_PRED_U] != 0.0) +
-                            (cfl_alpha_codes[c][CFL_PRED_V] != 0.0);
-        int prob_num = AOM_ICDF(ec_ctx->cfl_alpha_cdf[c]);
-        if (c > 0) prob_num -= AOM_ICDF(ec_ctx->cfl_alpha_cdf[c - 1]);
-        cfl_costs[c] = av1_cost_zero(get_prob(prob_num, prob_den)) +
-                       av1_cost_literal(sign_bit_cost);
+        int prob_num = AOM_ICDF(ec_ctx->cfl_uvec_cdf[c]);
+        if (c > 0) prob_num -= AOM_ICDF(ec_ctx->cfl_uvec_cdf[c - 1]);
+        cfl_uvec_costs[c] = av1_cost_zero(get_prob(prob_num, prob_den));
+        prob_num = AOM_ICDF(ec_ctx->cfl_mag_cdf[c]);
+        if (c > 0) prob_num -= AOM_ICDF(ec_ctx->cfl_mag_cdf[c - 1]);
+        cfl_mag_costs[c] = av1_cost_zero(get_prob(prob_num, prob_den));
       }
       cfl_dc_pred(xd, plane_bsize, tx_size);
-      mbmi->cfl_alpha_idx = cfl_compute_alpha_ind(
-          x, cfl, plane_bsize, cfl_costs, mbmi->cfl_alpha_signs);
+      mbmi->cfl_uvec_idx =
+          cfl_compute_alpha_ind(x, cfl, plane_bsize, cfl_uvec_costs,
+                                cfl_mag_costs, &mbmi->cfl_mag_idx);
     }
   }
   av1_predict_intra_block_facade(xd, plane, block_idx, blk_col, blk_row,

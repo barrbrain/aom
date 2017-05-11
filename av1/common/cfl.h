@@ -43,12 +43,18 @@ typedef struct {
   int num_tx_blk[CFL_PRED_PLANES];
 } CFL_CTX;
 
-static const double cfl_alpha_codes[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
-  // barrbrain's simple 1D quant ordered by subset 3 likelihood
-  { 0., 0. },    { 0.125, 0.125 }, { 0.25, 0. },   { 0.25, 0.125 },
-  { 0.125, 0. }, { 0.25, 0.25 },   { 0., 0.125 },  { 0.5, 0.5 },
-  { 0.5, 0.25 }, { 0.125, 0.25 },  { 0.5, 0. },    { 0.25, 0.5 },
-  { 0., 0.25 },  { 0.5, 0.125 },   { 0.125, 0.5 }, { 0., 0.5 }
+// Q3 unit vector codebook used to code the combination of alpha_u and alpha_v
+static const int cfl_alpha_uvecs[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
+  { 0, 0 },  { 8, -8 }, { -6, 8 }, { 8, -6 },
+  { -4, 8 }, { 8, -4 }, { -3, 8 }, { 8, -3 },
+  { -2, 8 }, { 8, -2 }, { 0, 8 },  { 8, 0 },
+  { 3, 8 },  { 8, 3 },  { 8, 6 },  { 6, 8 }
+};
+
+// Q13 magnitudes applied to alpha_uvec
+static const int cfl_alpha_mags[CFL_ALPHABET_SIZE] = {
+  512,  -512,  683,  -683,  1024, -1024, 1365, -1365,
+  2048, -2048, 2731, -2731, 4096, -4096, 5461, -5461
 };
 
 void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
@@ -56,15 +62,12 @@ void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
 
 void cfl_dc_pred(MACROBLOCKD *xd, BLOCK_SIZE plane_bsize, TX_SIZE tx_size);
 
-static INLINE double cfl_idx_to_alpha(int alpha_idx, CFL_SIGN_TYPE alpha_sign,
+static INLINE double cfl_idx_to_alpha(int cfl_uvec_idx, int cfl_mag_idx,
                                       CFL_PRED_TYPE pred_type) {
-  const double abs_alpha = cfl_alpha_codes[alpha_idx][pred_type];
-  if (alpha_sign == CFL_SIGN_POS) {
-    return abs_alpha;
-  } else {
-    assert(abs_alpha != 0.0);
-    return -abs_alpha;
-  }
+  const int component = cfl_alpha_uvecs[cfl_uvec_idx][pred_type];
+  return (component)
+             ? cfl_alpha_mags[cfl_mag_idx] * component * (1. / (1 << 16))
+             : 0.;
 }
 
 void cfl_predict_block(const CFL_CTX *cfl, uint8_t *dst, int dst_stride,

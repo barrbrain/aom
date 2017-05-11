@@ -209,23 +209,17 @@ static PREDICTION_MODE read_intra_mode_uv(AV1_COMMON *cm, MACROBLOCKD *xd,
 
 #if CONFIG_CFL
 static int read_cfl_alphas(FRAME_CONTEXT *const ec_ctx, aom_reader *r, int skip,
-                           CFL_SIGN_TYPE signs_out[CFL_PRED_PLANES]) {
+                           int *mag_out) {
   if (skip) {
-    signs_out[CFL_PRED_U] = CFL_SIGN_POS;
-    signs_out[CFL_PRED_V] = CFL_SIGN_POS;
+    *mag_out = 0;
     return 0;
   } else {
-    const int ind = aom_read_symbol(r, ec_ctx->cfl_alpha_cdf, CFL_ALPHABET_SIZE,
-                                    "cfl:alpha");
-    // Signs are only coded for nonzero values
-    // sign == 0 implies negative alpha
-    // sign == 1 implies positive alpha
-    signs_out[CFL_PRED_U] = (cfl_alpha_codes[ind][CFL_PRED_U] != 0.0)
-                                ? aom_read_bit(r, "cfl:sign")
-                                : CFL_SIGN_POS;
-    signs_out[CFL_PRED_V] = (cfl_alpha_codes[ind][CFL_PRED_V] != 0.0)
-                                ? aom_read_bit(r, "cfl:sign")
-                                : CFL_SIGN_POS;
+    const int ind =
+        aom_read_symbol(r, ec_ctx->cfl_uvec_cdf, CFL_ALPHABET_SIZE, "cfl:uvec");
+    // Magnitudes are only signaled for nonzero vectors.
+    if (ind)
+      *mag_out =
+          aom_read_symbol(r, ec_ctx->cfl_mag_cdf, CFL_ALPHABET_SIZE, "cfl:mag");
 
     return ind;
   }
@@ -1209,13 +1203,13 @@ static void read_intra_frame_mode_info(AV1_COMMON *const cm,
 #if CONFIG_CFL
     // TODO(ltrudeau) support PALETTE
     if (mbmi->uv_mode == DC_PRED) {
-      mbmi->cfl_alpha_idx = read_cfl_alphas(
+      mbmi->cfl_uvec_idx = read_cfl_alphas(
 #if CONFIG_EC_ADAPT
           xd->tile_ctx,
 #else
           cm->fc,
 #endif  // CONFIG_EC_ADAPT
-          r, mbmi->skip, mbmi->cfl_alpha_signs);
+          r, mbmi->skip, &mbmi->cfl_mag_idx);
     }
 #endif  // CONFIG_CFL
 
