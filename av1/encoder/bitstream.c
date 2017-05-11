@@ -1691,22 +1691,16 @@ static void write_intra_uv_mode(FRAME_CONTEXT *frame_ctx,
 }
 
 #if CONFIG_CFL
-static void write_cfl_alphas(FRAME_CONTEXT *const frame_ctx, int skip, int ind,
-                             const CFL_SIGN_TYPE signs[CFL_SIGNS],
-                             aom_writer *w) {
+static void write_cfl_alphas(FRAME_CONTEXT *const frame_ctx, int skip,
+                             int uvec_ind, int mag_ind, aom_writer *w) {
   if (skip) {
-    assert(ind == 0);
-    assert(signs[CFL_PRED_U] == CFL_SIGN_POS);
-    assert(signs[CFL_PRED_V] == CFL_SIGN_POS);
+    assert(uvec_ind == 0);
+    assert(mag_ind == 0);
   } else {
-    // Write a symbol representing a combination of alpha Cb and alpha Cr.
-    aom_write_symbol(w, ind, frame_ctx->cfl_alpha_cdf, CFL_ALPHABET_SIZE);
-
-    // Signs are only signaled for nonzero codes.
-    if (cfl_alpha_codes[ind][CFL_PRED_U] != 0)
-      aom_write_bit(w, signs[CFL_PRED_U]);
-    if (cfl_alpha_codes[ind][CFL_PRED_V] != 0)
-      aom_write_bit(w, signs[CFL_PRED_V]);
+    // Write the index of the unit vector of alpha Cb and alpha Cr.
+    aom_write_symbol(w, uvec_ind, frame_ctx->cfl_uvec_cdf, CFL_ALPHABET_SIZE);
+    if (uvec_ind)
+      aom_write_symbol(w, mag_ind, frame_ctx->cfl_mag_cdf, CFL_ALPHABET_SIZE);
   }
 }
 #endif
@@ -2202,8 +2196,8 @@ static void write_mb_modes_kf(AV1_COMMON *cm, const MACROBLOCKD *xd,
 
 #if CONFIG_CFL
     if (mbmi->uv_mode == DC_PRED) {
-      write_cfl_alphas(ec_ctx, mbmi->skip, mbmi->cfl_alpha_ind,
-                       mbmi->cfl_alpha_signs, w);
+      write_cfl_alphas(ec_ctx, mbmi->skip, mbmi->cfl_uvec_ind,
+                       mbmi->cfl_mag_ind, w);
     }
 #endif
 

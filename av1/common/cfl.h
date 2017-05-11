@@ -45,12 +45,18 @@ typedef struct {
   int num_tx_blk[CFL_PRED_PLANES];
 } CFL_CTX;
 
-static const double cfl_alpha_codes[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
-  // barrbrain's simple 1D quant ordered by subset 3 likelihood
-  { 0., 0. },    { 0.125, 0.125 }, { 0.25, 0. },   { 0.25, 0.125 },
-  { 0.125, 0. }, { 0.25, 0.25 },   { 0., 0.125 },  { 0.5, 0.5 },
-  { 0.5, 0.25 }, { 0.125, 0.25 },  { 0.5, 0. },    { 0.25, 0.5 },
-  { 0., 0.25 },  { 0.5, 0.125 },   { 0.125, 0.5 }, { 0., 0.5 }
+// Q3 unit vector codebook used to code the combination of alpha_u and alpha_v
+static const int cfl_alpha_uvecs[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
+  { 0, 0 },  { 8, -8 }, { -6, 8 }, { 8, -6 },
+  { -4, 8 }, { 8, -4 }, { -3, 8 }, { 8, -3 },
+  { -2, 8 }, { 8, -2 }, { 0, 8 },  { 8, 0 },
+  { 3, 8 },  { 8, 3 },  { 8, 6 },  { 6, 8 }
+};
+
+// Q13 magnitudes applied to alpha_uvec
+static const int cfl_alpha_mags[CFL_ALPHABET_SIZE] = {
+  512,  -512,  683,  -683,  1024, -1024, 1365, -1365,
+  2048, -2048, 2731, -2731, 4096, -4096, 5461, -5461
 };
 
 void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
