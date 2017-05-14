@@ -49,13 +49,13 @@ typedef struct {
 static const int cfl_alpha_uvecs[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
   { 0, 0 },      { 256, -256 }, { -192, 256 }, { 256, -192 },
   { -128, 256 }, { 256, -128 }, { -96, 256 },  { 256, -96 },
-  { -48, 256 },  { 256, -48 },  { 0, 256 },    { 256, 0 },
+  { -64, 256 },  { 256, -64 },  { 0, 256 },    { 256, 0 },
   { 96, 256 },   { 256, 96 },   { 256, 192 },  { 192, 256 }
 };
 
 // Q8 magnitudes applied to alpha_uvec
 static const int cfl_alpha_mags[CFL_ALPHABET_SIZE] = {
-  16, -16, 24, -24, 32, -32, 43, -43, 64, -64, 85, -85, 128, -128, 171, -171
+  16, -16, 21, -21, 32, -32, 43, -43, 64, -64, 85, -85, 128, -128, 171, -171
 };
 
 void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
