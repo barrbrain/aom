@@ -102,9 +102,9 @@ int ifd_inspect(insp_frame_data *fd, void *decoder) {
 #endif
 #if CONFIG_CFL
       if (mbmi->uv_mode == DC_PRED) {
-        mi->cfl_alpha_idx = mbmi->cfl_alpha_idx;
-        mi->cfl_alpha_sign = (mbmi->cfl_alpha_signs[CFL_PRED_V] << CFL_PRED_V) +
-                             mbmi->cfl_alpha_signs[CFL_PRED_U];
+        // FIXME: support new cfl scheme in analyzer
+        mi->cfl_alpha_idx = mbmi->cfl_uvec_idx * 16 + mbmi->cfl_mag_idx;
+        mi->cfl_alpha_sign = 0;
       } else {
         mi->cfl_alpha_idx = 0;
         mi->cfl_alpha_sign = 0;
