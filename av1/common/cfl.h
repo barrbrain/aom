@@ -45,17 +45,18 @@ typedef struct {
   int num_tx_blk[CFL_PRED_PLANES];
 } CFL_CTX;
 
-// Q8 unit vector codebook used to code the combination of alpha_u and alpha_v
+// Q3 unit vector codebook used to code the combination of alpha_u and alpha_v
 static const int cfl_alpha_uvecs[CFL_ALPHABET_SIZE][CFL_PRED_PLANES] = {
-  { 0, 0 },      { 256, -256 }, { -192, 256 }, { 256, -192 },
-  { -128, 256 }, { 256, -128 }, { -96, 256 },  { 256, -96 },
-  { -64, 256 },  { 256, -64 },  { 0, 256 },    { 256, 0 },
-  { 96, 256 },   { 256, 96 },   { 256, 192 },  { 192, 256 }
+  { 0, 0 },  { 8, -8 }, { -6, 8 }, { 8, -6 },
+  { -4, 8 }, { 8, -4 }, { -3, 8 }, { 8, -3 },
+  { -2, 8 }, { 8, -2 }, { 0, 8 },  { 8, 0 },
+  { 3, 8 },  { 8, 3 },  { 8, 6 },  { 6, 8 }
 };
 
-// Q8 magnitudes applied to alpha_uvec
+// Q13 magnitudes applied to alpha_uvec
 static const int cfl_alpha_mags[CFL_ALPHABET_SIZE] = {
-  16, -16, 21, -21, 32, -32, 43, -43, 64, -64, 85, -85, 128, -128, 171, -171
+  512,  -512,  683,  -683,  1024, -1024, 1365, -1365,
+  2048, -2048, 2731, -2731, 4096, -4096, 5461, -5461
 };
 
 void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm, int subsampling_x,
