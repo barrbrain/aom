@@ -1909,8 +1909,8 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const int mi_row,
 
 #if CONFIG_CFL
       if (mbmi->uv_mode == DC_PRED) {
-        write_cfl_alphas(ec_ctx, mbmi->skip, mbmi->cfl_alpha_idx,
-                         mbmi->cfl_alpha_signs, w);
+        write_cfl_alphas(ec_ctx, mbmi->skip, mbmi->cfl_uvec_idx,
+                         mbmi->cfl_mag_idx, w);
       }
 #endif
 
