@@ -1548,13 +1548,13 @@ static void read_intra_block_mode_info(AV1_COMMON *const cm, const int mi_row,
 #if CONFIG_CFL
     // TODO(ltrudeau) support PALETTE
     if (mbmi->uv_mode == DC_PRED) {
-      mbmi->cfl_alpha_idx = read_cfl_alphas(
+      mbmi->cfl_uvec_idx = read_cfl_alphas(
 #if CONFIG_EC_ADAPT
           xd->tile_ctx,
 #else
           cm->fc,
 #endif  // CONFIG_EC_ADAPT
-          r, mbmi->skip, mbmi->cfl_alpha_signs);
+          r, mbmi->skip, &mbmi->cfl_mag_idx);
     }
 #endif  // CONFIG_CFL
 
