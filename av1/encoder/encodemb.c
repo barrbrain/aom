@@ -1886,7 +1886,8 @@ static int cfl_compute_alpha_ind(MACROBLOCK *const x, const CFL_CTX *const cfl,
   dist = sse[CFL_PRED_U][0] + sse[CFL_PRED_V][0];
   dist *= 16;
   // TODO(barrbrain) use rate delta between UV_DC_PRED and UV_CFL_PRED
-  best_cost = RDCOST(x->rdmult, x->rddiv, 0, dist);
+  // No distortion ceiling, defer to outer RDO loop.
+  best_cost = INT64_MAX;
 
   for (int c = 0; c < CFL_ALPHABET_SIZE; c++) {
     for (int m = 0; m < CFL_ALPHABET_SIZE; m++) {
