@@ -4531,6 +4531,8 @@ static TX_MODE select_tx_mode(const AV1_COMP *cpi, MACROBLOCKD *const xd) {
     all_lossless = xd->lossless[0];
   }
   if (all_lossless) return ONLY_4X4;
+  return TX_MODE_SELECT;
+#if 0
   if (cpi->sf.tx_size_search_method == USE_LARGESTALL)
     return ALLOW_32X32 + CONFIG_TX64X64;
   else if (cpi->sf.tx_size_search_method == USE_FULL_RD ||
@@ -4538,6 +4540,7 @@ static TX_MODE select_tx_mode(const AV1_COMP *cpi, MACROBLOCKD *const xd) {
     return TX_MODE_SELECT;
   else
     return cpi->common.tx_mode;
+#endif
 }
 
 void av1_init_tile_data(AV1_COMP *cpi) {

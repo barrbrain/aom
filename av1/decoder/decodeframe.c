@@ -163,6 +163,8 @@ static TX_MODE read_tx_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
   }
 
   if (all_lossless) return ONLY_4X4;
+  return TX_MODE_SELECT;
+#if 0
 #if CONFIG_TX64X64
   tx_mode = aom_rb_read_bit(rb) ? TX_MODE_SELECT : aom_rb_read_literal(rb, 2);
   if (tx_mode == ALLOW_32X32) tx_mode += aom_rb_read_bit(rb);
@@ -170,6 +172,7 @@ static TX_MODE read_tx_mode(AV1_COMMON *cm, MACROBLOCKD *xd,
 #else
   return aom_rb_read_bit(rb) ? TX_MODE_SELECT : aom_rb_read_literal(rb, 2);
 #endif  // CONFIG_TX64X64
+#endif
 }
 
 #if !CONFIG_EC_ADAPT

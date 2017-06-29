@@ -3892,6 +3892,9 @@ static void write_tx_mode(AV1_COMMON *cm, MACROBLOCKD *xd, TX_MODE *mode,
     *mode = ONLY_4X4;
     return;
   }
+  *mode = TX_MODE_SELECT;
+  return;
+#if 0
 #if CONFIG_TX64X64
   aom_wb_write_bit(wb, *mode == TX_MODE_SELECT);
   if (*mode != TX_MODE_SELECT) {
@@ -3902,6 +3905,7 @@ static void write_tx_mode(AV1_COMMON *cm, MACROBLOCKD *xd, TX_MODE *mode,
   aom_wb_write_bit(wb, *mode == TX_MODE_SELECT);
   if (*mode != TX_MODE_SELECT) aom_wb_write_literal(wb, *mode, 2);
 #endif  // CONFIG_TX64X64
+#endif
 }
 
 #if !CONFIG_EC_ADAPT
