@@ -179,8 +179,8 @@ static void cfl_dc_pred(MACROBLOCKD *xd, BLOCK_SIZE plane_bsize) {
 
   // TODO(ltrudeau) Because of max_block_wide and max_block_high, num_pel will
   // not be a power of two. So these divisions will have to use a lookup table.
-  cfl->dc_pred[CFL_PRED_U] = sum_u / num_pel;
-  cfl->dc_pred[CFL_PRED_V] = sum_v / num_pel;
+  cfl->dc_pred[CFL_PRED_U] = floor(.5 + sum_u / num_pel);
+  cfl->dc_pred[CFL_PRED_V] = floor(.5 + sum_v / num_pel);
 }
 
 static void cfl_compute_average(CFL_CTX *cfl) {
@@ -200,18 +200,17 @@ static void cfl_compute_average(CFL_CTX *cfl) {
     }
     y_pix += MAX_SB_SIZE;
   }
-  cfl->y_average = sum / num_pel;
+  cfl->y_average = floor(.5 + (sum / num_pel) * (1 << 3)) * (1. / (1 << 3));
 }
 
 static INLINE double cfl_idx_to_alpha(int alpha_idx, CFL_SIGN_TYPE alpha_sign,
                                       CFL_PRED_TYPE pred_type) {
   const int mag_idx = cfl_alpha_codes[alpha_idx][pred_type];
-  const double abs_alpha = cfl_alpha_mags[mag_idx];
+  const double abs_alpha = floor(.5 + cfl_alpha_mags[mag_idx] * (1 << 12)) * (1. / (1 << 12));
   if (alpha_sign == CFL_SIGN_POS) {
     return abs_alpha;
   } else {
     assert(abs_alpha != 0.0);
-    assert(cfl_alpha_mags[mag_idx + 1] == -abs_alpha);
     return -abs_alpha;
   }
 }

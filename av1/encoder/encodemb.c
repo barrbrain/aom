@@ -1538,13 +1538,13 @@ static void cfl_compute_alpha_ind(MACROBLOCK *const x, FRAME_CONTEXT *ec_ctx,
       cfl_alpha_dist(y_pix, MAX_SB_SIZE, y_average, src_v, src_stride_v, width,
                      height, tx_size, dc_pred_v, 0, NULL);
   for (int m = 1; m < CFL_MAGS_SIZE; m += 2) {
-    assert(cfl_alpha_mags[m + 1] == -cfl_alpha_mags[m]);
+    double alpha = floor(.5 + cfl_alpha_mags[m] * (1 << 12)) * (1. / (1 << 12));
     sse[CFL_PRED_U][m] = cfl_alpha_dist(
         y_pix, MAX_SB_SIZE, y_average, src_u, src_stride_u, width, height,
-        tx_size, dc_pred_u, cfl_alpha_mags[m], &sse[CFL_PRED_U][m + 1]);
+        tx_size, dc_pred_u, alpha, &sse[CFL_PRED_U][m + 1]);
     sse[CFL_PRED_V][m] = cfl_alpha_dist(
         y_pix, MAX_SB_SIZE, y_average, src_v, src_stride_v, width, height,
-        tx_size, dc_pred_v, cfl_alpha_mags[m], &sse[CFL_PRED_V][m + 1]);
+        tx_size, dc_pred_v, alpha, &sse[CFL_PRED_V][m + 1]);
   }
 
   int dist;
