@@ -3249,13 +3249,13 @@ static const aom_cdf_prob
 #endif  // CONFIG_EXT_INTRA && CONFIG_INTRA_INTERP
 
 #if CONFIG_CFL
-static const aom_cdf_prob default_cfl_sign_cdf[CDF_SIZE(9)] = {
-  AOM_ICDF(3641), AOM_ICDF(7282), AOM_ICDF(10923),
+static const aom_cdf_prob default_cfl_sign_cdf[CDF_SIZE(CFL_JOINT_SIGNS)] = {
+  AOM_ICDF(3641),  AOM_ICDF(7282),  AOM_ICDF(10923),
   AOM_ICDF(14564), AOM_ICDF(18204), AOM_ICDF(21845),
   AOM_ICDF(25486), AOM_ICDF(29127), AOM_ICDF(32768)
 };
 
-static const aom_cdf_prob default_cfl_alpha_cdf[CDF_SIZE(16)] = {
+static const aom_cdf_prob default_cfl_alpha_cdf[CDF_SIZE(UV_ALPHABET_SIZE)] = {
   AOM_ICDF(12599), AOM_ICDF(20356), AOM_ICDF(25131), AOM_ICDF(28072),
   AOM_ICDF(29882), AOM_ICDF(30997), AOM_ICDF(31683), AOM_ICDF(32105),
   AOM_ICDF(32365), AOM_ICDF(32525), AOM_ICDF(32624), AOM_ICDF(32685),
@@ -4805,9 +4805,9 @@ static void init_mode_probs(FRAME_CONTEXT *fc) {
 #endif  // CONFIG_DELTA_Q
 #if CONFIG_CFL
   av1_copy(fc->cfl_sign_cdf, default_cfl_sign_cdf);
-  for (int js = 0; js < 9; js++) {
-    av1_copy(fc->cfl_alpha_cdf[js][0], default_cfl_alpha_cdf);
-    av1_copy(fc->cfl_alpha_cdf[js][1], default_cfl_alpha_cdf);
+  for (int js = 0; js < CFL_JOINT_SIGNS; js++) {
+    av1_copy(fc->cfl_alpha_cdf[js][CFL_PRED_U], default_cfl_alpha_cdf);
+    av1_copy(fc->cfl_alpha_cdf[js][CFL_PRED_V], default_cfl_alpha_cdf);
   }
 #endif
 #if CONFIG_INTRABC
