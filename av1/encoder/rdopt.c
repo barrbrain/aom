@@ -5410,8 +5410,8 @@ static inline void cfl_update_costs(CFL_CTX *cfl, FRAME_CONTEXT *ec_ctx) {
   aom_cdf_prob prev_cdf = 0;
 
   for (CFL_SIGN_TYPE sign_u = 0; sign_u < CFL_SIGNS; sign_u++) {
-    for (CFL_SIGN_TYPE sign_v = 0; sign_v < CFL_SIGNS; sign_v++) {
-      const int js = sign_u * CFL_SIGNS + sign_v;
+    for (CFL_SIGN_TYPE sign_v = !sign_u; sign_v < CFL_SIGNS; sign_v++) {
+      const int js = sign_u * CFL_SIGNS + sign_v - 1;
       aom_cdf_prob prob = AOM_ICDF(ec_ctx->cfl_sign_cdf[js]) - prev_cdf;
       const int sign_cost = av1_cost_symbol(prob);
       prev_cdf = 0;
@@ -5432,7 +5432,7 @@ static inline void cfl_update_costs(CFL_CTX *cfl, FRAME_CONTEXT *ec_ctx) {
           cfl->costs[js][CFL_PRED_V][v] = av1_cost_symbol(prob);
         }
       }
-      prev_cdf = AOM_ICDF(ec_ctx->cfl_sign_cdf[js]);
+      prev_cdf = AOM_ICDF(ec_ctx->cfl_sign_cdf[js - 1]);
     }
   }
 }
@@ -5486,20 +5486,12 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
   int best_rate;
 
   // Compute least squares parameter of the entire block
-  // IMPORTANT: We assume that the first code is 0,0
-  int ind = 0;
-  signs[CFL_PRED_U] = CFL_SIGN_ZERO;
-  signs[CFL_PRED_V] = CFL_SIGN_ZERO;
-
-  dist = sse[CFL_PRED_U][0] + sse[CFL_PRED_V][0];
-  dist *= 16;
-  best_rate = cfl->costs[0][CFL_PRED_U][0] +
-              cfl->costs[0][CFL_PRED_V][0];
-  best_cost = RDCOST(x->rdmult, best_rate, dist);
+  int ind;
+  best_cost = INT64_MAX;
 
   for (CFL_SIGN_TYPE sign_u = 0; sign_u < CFL_SIGNS; sign_u++) {
-    for (CFL_SIGN_TYPE sign_v = 0; sign_v < CFL_SIGNS; sign_v++) {
-      const int joint_sign = sign_u * CFL_SIGNS + sign_v;
+    for (CFL_SIGN_TYPE sign_v = !sign_u; sign_v < CFL_SIGNS; sign_v++) {
+      const int joint_sign = sign_u * CFL_SIGNS + sign_v - 1;
       for (int u = 0; u < UV_ALPHABET_SIZE; u++) {
         const int idx_u = (sign_u == CFL_SIGN_ZERO) ? 0 : u * 2 + 1;
         for (int v = 0; v < UV_ALPHABET_SIZE; v++) {
@@ -5524,6 +5516,7 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
     }
   }
 
+  assert(best_cost != INT64_MAX);
   mbmi->cfl_alpha_idx = ind;
   return best_rate;
 }

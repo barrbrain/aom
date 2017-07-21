@@ -187,9 +187,9 @@ static int read_cfl_alphas(FRAME_CONTEXT *const ec_ctx, aom_reader *r,
   const int js =
       aom_read_symbol(r, ec_ctx->cfl_sign_cdf, CFL_JOINT_SIGNS, "cfl:signs");
   const int sign_u = signs_out[CFL_PRED_U] = CFL_SIGN_U(js);
-  assert(sign_u == js / CFL_SIGNS);
+  assert(sign_u == (js + 1) / CFL_SIGNS);
   const int sign_v = signs_out[CFL_PRED_V] = CFL_SIGN_V(js);
-  assert(sign_v == js % CFL_SIGNS);
+  assert(sign_v == (js + 1) % CFL_SIGNS);
 
   int ind = 0;
   // Magnitudes are only coded for nonzero values

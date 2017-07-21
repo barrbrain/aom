@@ -3440,9 +3440,8 @@ static const aom_cdf_prob
 
 #if CONFIG_CFL
 static const aom_cdf_prob default_cfl_sign_cdf[CDF_SIZE(CFL_JOINT_SIGNS)] = {
-  AOM_ICDF(3641),  AOM_ICDF(7282),  AOM_ICDF(10923),
-  AOM_ICDF(14564), AOM_ICDF(18204), AOM_ICDF(21845),
-  AOM_ICDF(25486), AOM_ICDF(29127), AOM_ICDF(32768)
+  AOM_ICDF(1474),  AOM_ICDF(4703),  AOM_ICDF(6555),  AOM_ICDF(7197),
+  AOM_ICDF(12783), AOM_ICDF(19627), AOM_ICDF(29147), AOM_ICDF(32768)
 };
 
 static const aom_cdf_prob default_cfl_alpha_cdf[CDF_SIZE(UV_ALPHABET_SIZE)] = {

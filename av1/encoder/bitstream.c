@@ -1667,9 +1667,11 @@ static void write_cfl_alphas(FRAME_CONTEXT *const frame_ctx, int idx,
   // Check for uninitialized signs
   if (signs[CFL_PRED_U] == CFL_SIGN_ZERO) assert((idx & 0xf0) == 0);
   if (signs[CFL_PRED_V] == CFL_SIGN_ZERO) assert((idx & 0x0f) == 0);
+  assert(signs[CFL_PRED_U] != CFL_SIGN_ZERO ||
+         signs[CFL_PRED_V] != CFL_SIGN_ZERO);
 #endif  // CONFIG_DEBUG
 
-  const int js = signs[CFL_PRED_U] * CFL_SIGNS + signs[CFL_PRED_V];
+  const int js = signs[CFL_PRED_U] * CFL_SIGNS + signs[CFL_PRED_V] - 1;
   aom_write_symbol(w, js, frame_ctx->cfl_sign_cdf, CFL_JOINT_SIGNS);
 
   // Magnitudes are only signaled for nonzero codes.
