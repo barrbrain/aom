@@ -5471,16 +5471,12 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
   int64_t best_cost;
 
   // Compute least squares parameter of the entire block
-  // IMPORTANT: We assume that the first code is 0,0
   int ind = 0;
   signs[CFL_PRED_U] = CFL_SIGN_POS;
   signs[CFL_PRED_V] = CFL_SIGN_POS;
+  best_cost = INT64_MAX;
 
-  dist = sse[CFL_PRED_U][0] + sse[CFL_PRED_V][0];
-  dist *= 16;
-  best_cost = RDCOST(x->rdmult, cfl->costs[0], dist);
-
-  for (int c = 1; c < CFL_ALPHABET_SIZE; c++) {
+  for (int c = 0; c < CFL_ALPHABET_SIZE; c++) {
     const int idx_u = cfl_alpha_codes[c][CFL_PRED_U];
     const int idx_v = cfl_alpha_codes[c][CFL_PRED_V];
     for (CFL_SIGN_TYPE sign_u = idx_u == 0; sign_u < CFL_SIGNS; sign_u++) {
