@@ -70,11 +70,6 @@ typedef struct {
 // on chroma DC_PRED.
 #define SMALLEST_ALPHA_EQUALS_ONE (1 << 4)
 
-static const int cfl_alpha_mags_q4[CFL_MAGS_SIZE] = {
-  0, 1,  -1, 2,   -2, 3,   -3, 4,   -4, 5,   -5, 6,   -6, 7,   -7, 8,  -8,
-  9, -9, 10, -10, 11, -11, 12, -12, 13, -13, 14, -14, 15, -15, 16, -16
-};
-
 static INLINE int get_scaled_luma_q0(int alpha_q4, int y_pix, int avg_q3) {
   return (alpha_q4 * ((y_pix << 3) - avg_q3) + 64) >> 7;
 }

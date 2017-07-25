@@ -5523,14 +5523,15 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
       cfl_alpha_dist(y_pix, MAX_SB_SIZE, y_averages_q3, src_v, src_stride_v,
                      width, height, tx_size, dc_pred_v, 0, NULL);
 
-  for (int m = 1; m < CFL_MAGS_SIZE; m += 2) {
-    assert(cfl_alpha_mags_q4[m + 1] == -cfl_alpha_mags_q4[m]);
+  for (int uv = 0; uv < UV_ALPHABET_SIZE ; uv++) {
+    const int m = uv * 2 + 1;
+    const int abs_alpha_q4 = uv + 1;
     sse[CFL_PRED_U][m] = cfl_alpha_dist(
         y_pix, MAX_SB_SIZE, y_averages_q3, src_u, src_stride_u, width, height,
-        tx_size, dc_pred_u, cfl_alpha_mags_q4[m], &sse[CFL_PRED_U][m + 1]);
+        tx_size, dc_pred_u, abs_alpha_q4, &sse[CFL_PRED_U][m + 1]);
     sse[CFL_PRED_V][m] = cfl_alpha_dist(
         y_pix, MAX_SB_SIZE, y_averages_q3, src_v, src_stride_v, width, height,
-        tx_size, dc_pred_v, cfl_alpha_mags_q4[m], &sse[CFL_PRED_V][m + 1]);
+        tx_size, dc_pred_v, abs_alpha_q4, &sse[CFL_PRED_V][m + 1]);
   }
 
   int64_t dist;
