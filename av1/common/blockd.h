@@ -470,7 +470,7 @@ typedef struct MB_MODE_INFO {
 #if CONFIG_CFL
   // Index of the alpha Cb and alpha Cr combination
   int cfl_alpha_idx;
-  // Signs of alpha Cb and alpha Cr
+  // Joint Sign of alpha Cb and alpha Cr
   int cfl_alpha_signs;
 #endif
 

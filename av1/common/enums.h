@@ -355,8 +355,9 @@ typedef enum {
 #define CFL_SIGN_V(js) ((js + 1) - CFL_SIGNS * CFL_SIGN_U(js))
 
 #define CFL_ALPHA_CONTEXTS 6
-#define CFL_JOINT_SWAP(js) (CFL_SIGN_V(js) * CFL_SIGNS + CFL_SIGN_U(js) - 1)
-#define CFL_GET_CONTEXT(js, plane) ((plane ? CFL_JOINT_SWAP(js) : js) - 2)
+#define CFL_CONTEXT_U(js) (js - 2)
+#define CFL_CONTEXT_V(js) \
+  (CFL_SIGN_V(js) * CFL_SIGNS + CFL_SIGN_U(js) - CFL_SIGNS)
 #endif
 
 #if CONFIG_PALETTE

@@ -5656,9 +5656,9 @@ static inline void cfl_update_costs(CFL_CTX *cfl, FRAME_CONTEXT *ec_ctx) {
   av1_cost_tokens_from_cdf(sign_cost, ec_ctx->cfl_sign_cdf, NULL);
   for (int joint_sign = 0; joint_sign < CFL_JOINT_SIGNS; joint_sign++) {
     const aom_cdf_prob *cdf_u =
-        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_U)];
+        ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_U(joint_sign)];
     const aom_cdf_prob *cdf_v =
-        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_V)];
+        ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_V(joint_sign)];
     int *cost_u = cfl->costs[joint_sign][CFL_PRED_U];
     int *cost_v = cfl->costs[joint_sign][CFL_PRED_V];
     if (CFL_SIGN_U(joint_sign) == CFL_SIGN_ZERO)

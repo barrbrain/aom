@@ -162,14 +162,12 @@ static int read_cfl_alphas(FRAME_CONTEXT *const ec_ctx, aom_reader *r,
   int idx = 0;
   // Magnitudes are only coded for nonzero values
   if (CFL_SIGN_U(joint_sign) != CFL_SIGN_ZERO) {
-    const aom_cdf_prob *cdf_u =
-        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_U)];
+    aom_cdf_prob *cdf_u = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_U(joint_sign)];
     idx = aom_read_symbol(r, cdf_u, UV_ALPHABET_SIZE, "cfl:alpha_u")
           << UV_ALPHABET_SIZE_LOG2;
   }
   if (CFL_SIGN_V(joint_sign) != CFL_SIGN_ZERO) {
-    const aom_cdf_prob *cdf_v =
-        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_V)];
+    aom_cdf_prob *cdf_v = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_V(joint_sign)];
     idx += aom_read_symbol(r, cdf_v, UV_ALPHABET_SIZE, "cfl:alpha_v");
   }
   *signs_out = joint_sign;
