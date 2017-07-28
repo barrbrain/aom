@@ -227,10 +227,11 @@ static void cfl_compute_averages(CFL_CTX *cfl, TX_SIZE tx_size) {
   assert(a <= MAX_NUM_TXB);
 }
 
-static INLINE int cfl_idx_to_alpha(int alpha_idx, CFL_SIGN_TYPE alpha_sign,
+static INLINE int cfl_idx_to_alpha(int alpha_idx, int joint_sign,
                                    CFL_PRED_TYPE pred_type) {
+  const int alpha_sign =
+      (pred_type == CFL_PRED_U) ? CFL_SIGN_U(joint_sign) : CFL_SIGN_V(joint_sign);
   if (alpha_sign == CFL_SIGN_ZERO) return 0;
-
   const int abs_alpha_q3 =
       (pred_type == CFL_PRED_U) ? CFL_IDX_U(alpha_idx) : CFL_IDX_V(alpha_idx);
   return (alpha_sign == CFL_SIGN_POS) ? abs_alpha_q3 + 1 : -abs_alpha_q3 - 1;
@@ -252,7 +253,7 @@ void cfl_predict_block(MACROBLOCKD *const xd, uint8_t *dst, int dst_stride,
 
   const int dc_pred = cfl->dc_pred[plane - 1];
   const int alpha_q3 = cfl_idx_to_alpha(
-      mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs[plane - 1], plane - 1);
+      mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs, plane - 1);
 
   const int avg_row =
       (row << tx_size_wide_log2[0]) >> tx_size_wide_log2[tx_size];

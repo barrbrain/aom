@@ -69,21 +69,6 @@ static INLINE int get_scaled_luma_q0(int alpha_q3, int y_pix, int avg_q3) {
   return (alpha_q3 * ((y_pix << 3) - avg_q3) + 32) >> 6;
 }
 
-static INLINE int get_joint_sign(CFL_SIGN_TYPE sign_u, CFL_SIGN_TYPE sign_v) {
-  // 0,0 is invalid
-  assert(sign_u != CFL_SIGN_ZERO || sign_v != CFL_SIGN_ZERO);
-  return sign_u * CFL_SIGNS + sign_v - 1;
-}
-
-static INLINE CFL_ALPHA_CONTEXT get_alpha_context(int joint_sign, int plane) {
-  static const CFL_ALPHA_CONTEXT context[CFL_PRED_PLANES][CFL_JOINT_SIGNS] = {
-    { 0, 0, 0, 1, 2, 3, 4, 5 }, { 0, 3, 0, 1, 4, 0, 2, 5 }
-  };
-  assert(joint_sign < CFL_JOINT_SIGNS);
-  assert(plane < CFL_PRED_PLANES);
-  return context[plane][joint_sign];
-}
-
 void cfl_init(CFL_CTX *cfl, AV1_COMMON *cm);
 
 void cfl_predict_block(MACROBLOCKD *const xd, uint8_t *dst, int dst_stride,

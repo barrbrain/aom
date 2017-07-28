@@ -1642,28 +1642,19 @@ static void write_intra_uv_mode(FRAME_CONTEXT *frame_ctx,
 }
 
 #if CONFIG_CFL
-static void write_cfl_alphas(FRAME_CONTEXT *const frame_ctx, int idx,
-                             const CFL_SIGN_TYPE signs[CFL_SIGNS],
-                             aom_writer *w) {
-#if CONFIG_DEBUG
-  // Check for uninitialized signs
-  if (signs[CFL_PRED_U] == CFL_SIGN_ZERO) assert(CFL_IDX_U(idx) == 0);
-  if (signs[CFL_PRED_V] == CFL_SIGN_ZERO) assert(CFL_IDX_V(idx) == 0);
-#endif  // CONFIG_DEBUG
-
-  const int joint_sign = get_joint_sign(signs[CFL_PRED_U], signs[CFL_PRED_V]);
-  aom_write_symbol(w, joint_sign, frame_ctx->cfl_sign_cdf, CFL_JOINT_SIGNS);
-
+static void write_cfl_alphas(FRAME_CONTEXT *const ec_ctx, int idx,
+                             int joint_sign, aom_writer *w) {
+  aom_write_symbol(w, joint_sign, ec_ctx->cfl_sign_cdf, CFL_JOINT_SIGNS);
   // Magnitudes are only signaled for nonzero codes.
-  if (signs[CFL_PRED_U] != CFL_SIGN_ZERO) {
-    const CFL_ALPHA_CONTEXT ctx = get_alpha_context(joint_sign, CFL_PRED_U);
-    aom_write_symbol(w, CFL_IDX_U(idx), frame_ctx->cfl_alpha_cdf[ctx],
-                     UV_ALPHABET_SIZE);
+  if (CFL_SIGN_U(joint_sign) != CFL_SIGN_ZERO) {
+    aom_cdf_prob *cdf_u =
+        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_U)];
+    aom_write_symbol(w, CFL_IDX_U(idx), cdf_u, UV_ALPHABET_SIZE);
   }
-  if (signs[CFL_PRED_V] != CFL_SIGN_ZERO) {
-    const CFL_ALPHA_CONTEXT ctx = get_alpha_context(joint_sign, CFL_PRED_V);
-    aom_write_symbol(w, CFL_IDX_V(idx), frame_ctx->cfl_alpha_cdf[ctx],
-                     UV_ALPHABET_SIZE);
+  if (CFL_SIGN_V(joint_sign) != CFL_SIGN_ZERO) {
+    aom_cdf_prob *cdf_v =
+        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_V)];
+    aom_write_symbol(w, CFL_IDX_V(idx), cdf_v, UV_ALPHABET_SIZE);
   }
 }
 #endif

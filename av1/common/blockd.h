@@ -471,7 +471,7 @@ typedef struct MB_MODE_INFO {
   // Index of the alpha Cb and alpha Cr combination
   int cfl_alpha_idx;
   // Signs of alpha Cb and alpha Cr
-  CFL_SIGN_TYPE cfl_alpha_signs[CFL_PRED_PLANES];
+  int cfl_alpha_signs;
 #endif
 
   BOUNDARY_TYPE boundary_info;

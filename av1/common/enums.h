@@ -335,6 +335,8 @@ typedef enum { PLANE_TYPE_Y = 0, PLANE_TYPE_UV = 1, PLANE_TYPES } PLANE_TYPE;
 #define UV_ALPHABET_SIZE_LOG2 4
 #define UV_ALPHABET_SIZE (1 << UV_ALPHABET_SIZE_LOG2)
 #define CFL_MAGS_SIZE ((2 << UV_ALPHABET_SIZE_LOG2) + 1)
+#define CFL_IDX_U(idx) (idx >> UV_ALPHABET_SIZE_LOG2)
+#define CFL_IDX_V(idx) (idx & (UV_ALPHABET_SIZE - 1))
 
 typedef enum { CFL_PRED_U = 0, CFL_PRED_V = 1, CFL_PRED_PLANES } CFL_PRED_TYPE;
 
@@ -345,19 +347,16 @@ typedef enum {
   CFL_SIGNS
 } CFL_SIGN_TYPE;
 
-#define CFL_IDX_U(idx) (idx >> UV_ALPHABET_SIZE_LOG2)
-#define CFL_IDX_V(idx) (idx & (UV_ALPHABET_SIZE - 1))
-
+// CFL_SIGN_ZERO,CFL_SIGN_ZERO is invalid
+#define CFL_JOINT_SIGNS (CFL_SIGNS * CFL_SIGNS - 1)
 // CFL_SIGN_U is equivalent to (js + 1) / 3 for js in 0 to 8
 #define CFL_SIGN_U(js) (((js + 1) * 11) >> 5)
 // CFL_SIGN_V is equivalent to (js + 1) % 3 for js in 0 to 8
 #define CFL_SIGN_V(js) ((js + 1) - CFL_SIGNS * CFL_SIGN_U(js))
 
-// CFL_SIGN_ZERO,CFL_SIGN_ZERO is invalid
-#define CFL_JOINT_SIGNS (CFL_SIGNS * CFL_SIGNS - 1)
-
-typedef int CFL_ALPHA_CONTEXT;
 #define CFL_ALPHA_CONTEXTS 6
+#define CFL_JOINT_SWAP(js) (CFL_SIGN_V(js) * CFL_SIGNS + CFL_SIGN_U(js) - 1)
+#define CFL_GET_CONTEXT(js, plane) ((plane ? CFL_JOINT_SWAP(js) : js) - 2)
 #endif
 
 #if CONFIG_PALETTE

@@ -5654,27 +5654,21 @@ static int64_t cfl_alpha_dist(const uint8_t *y_pix, int y_stride,
 static inline void cfl_update_costs(CFL_CTX *cfl, FRAME_CONTEXT *ec_ctx) {
   int sign_cost[CFL_JOINT_SIGNS];
   av1_cost_tokens_from_cdf(sign_cost, ec_ctx->cfl_sign_cdf, NULL);
-
   for (int joint_sign = 0; joint_sign < CFL_JOINT_SIGNS; joint_sign++) {
     const aom_cdf_prob *cdf_u =
-        ec_ctx->cfl_alpha_cdf[get_alpha_context(joint_sign, CFL_PRED_U)];
+        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_U)];
     const aom_cdf_prob *cdf_v =
-        ec_ctx->cfl_alpha_cdf[get_alpha_context(joint_sign, CFL_PRED_V)];
-    const int sign_u = CFL_SIGN_U(joint_sign);
-    const int sign_v = CFL_SIGN_V(joint_sign);
+        ec_ctx->cfl_alpha_cdf[CFL_GET_CONTEXT(joint_sign, CFL_PRED_V)];
     int *cost_u = cfl->costs[joint_sign][CFL_PRED_U];
     int *cost_v = cfl->costs[joint_sign][CFL_PRED_V];
-
-    if (sign_u == CFL_SIGN_ZERO)
+    if (CFL_SIGN_U(joint_sign) == CFL_SIGN_ZERO)
       memset(cost_u, 0, UV_ALPHABET_SIZE * sizeof(*cost_u));
     else
       av1_cost_tokens_from_cdf(cost_u, cdf_u, NULL);
-
-    if (sign_v == CFL_SIGN_ZERO)
+    if (CFL_SIGN_V(joint_sign) == CFL_SIGN_ZERO)
       memset(cost_v, 0, UV_ALPHABET_SIZE * sizeof(*cost_v));
     else
       av1_cost_tokens_from_cdf(cost_v, cdf_v, NULL);
-
     for (int u = 0; u < UV_ALPHABET_SIZE; u++)
       cost_u[u] += sign_cost[joint_sign];
   }
@@ -5701,8 +5695,6 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
   const int *y_averages_q3 = cfl->y_averages_q3;
   const uint8_t *y_pix = cfl->y_down_pix;
 
-  CFL_SIGN_TYPE *signs = mbmi->cfl_alpha_signs;
-
   cfl_update_costs(cfl, ec_ctx);
 
   int64_t sse[CFL_PRED_PLANES][CFL_MAGS_SIZE];
@@ -5726,22 +5718,21 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
 
   int64_t dist;
   int64_t cost;
-  int64_t best_cost;
-  int best_rate;
+  int64_t best_cost = INT64_MAX;
+  int best_rate = 0;
 
   // Compute least squares parameter of the entire block
   int ind = 0;
-  signs[CFL_PRED_U] = CFL_SIGN_POS;
-  signs[CFL_PRED_V] = CFL_SIGN_POS;
-  best_rate = 0;
-  best_cost = INT64_MAX;
+  int signs = 0;
 
   for (int joint_sign = 0; joint_sign < CFL_JOINT_SIGNS; joint_sign++) {
     const int sign_u = CFL_SIGN_U(joint_sign);
     const int sign_v = CFL_SIGN_V(joint_sign);
-    for (int u = 0; u < UV_ALPHABET_SIZE; u++) {
+    const int size_u = (sign_u == CFL_SIGN_ZERO) ? 1 : UV_ALPHABET_SIZE;
+    const int size_v = (sign_v == CFL_SIGN_ZERO) ? 1 : UV_ALPHABET_SIZE;
+    for (int u = 0; u < size_u; u++) {
       const int idx_u = (sign_u == CFL_SIGN_ZERO) ? 0 : u * 2 + 1;
-      for (int v = 0; v < UV_ALPHABET_SIZE; v++) {
+      for (int v = 0; v < size_v; v++) {
         const int idx_v = (sign_v == CFL_SIGN_ZERO) ? 0 : v * 2 + 1;
         dist = sse[CFL_PRED_U][idx_u + (sign_u == CFL_SIGN_NEG)] +
                sse[CFL_PRED_V][idx_v + (sign_v == CFL_SIGN_NEG)];
@@ -5753,16 +5744,14 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, TX_SIZE tx_size) {
           best_cost = cost;
           best_rate = rate;
           ind = (u << UV_ALPHABET_SIZE_LOG2) + v;
-          signs[CFL_PRED_U] = sign_u;
-          signs[CFL_PRED_V] = sign_v;
+          signs = joint_sign;
         }
-        if (sign_v == CFL_SIGN_ZERO) break;
       }
-      if (sign_u == CFL_SIGN_ZERO) break;
     }
   }
 
   mbmi->cfl_alpha_idx = ind;
+  mbmi->cfl_alpha_signs = signs;
   return best_rate;
 }
 #endif  // CONFIG_CFL

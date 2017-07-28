@@ -103,8 +103,7 @@ int ifd_inspect(insp_frame_data *fd, void *decoder) {
 #if CONFIG_CFL
       if (mbmi->uv_mode == UV_CFL_PRED) {
         mi->cfl_alpha_idx = mbmi->cfl_alpha_idx;
-        mi->cfl_alpha_sign = get_joint_sign(mbmi->cfl_alpha_signs[CFL_PRED_U],
-                                            mbmi->cfl_alpha_signs[CFL_PRED_V]);
+        mi->cfl_alpha_sign = mbmi->cfl_alpha_signs;
       } else {
         mi->cfl_alpha_idx = 0;
         mi->cfl_alpha_sign = 0;
