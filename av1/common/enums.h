@@ -354,8 +354,11 @@ typedef enum {
 // CFL_SIGN_V is equivalent to (js + 1) % 3 for js in 0 to 8
 #define CFL_SIGN_V(js) ((js + 1) - CFL_SIGNS * CFL_SIGN_U(js))
 
+// There is no context when the alpha for a given plane is zero.
+// So there are 2 fewer contexts than joint signs.
 #define CFL_ALPHA_CONTEXTS 6
 #define CFL_CONTEXT_U(js) (js - 2)
+// Also, the contexts are symmetric under swapping the planes.
 #define CFL_CONTEXT_V(js) \
   (CFL_SIGN_V(js) * CFL_SIGNS + CFL_SIGN_U(js) - CFL_SIGNS)
 #endif
