@@ -26,7 +26,11 @@
 
 int av1_get_tx_scale(const TX_SIZE tx_size) {
   const int pels = tx_size_2d[tx_size];
+#if CONFIG_DAALA_TX
+  return 0;
+#else
   return (pels > 256) + (pels > 1024) + (pels > 4096);
+#endif
 }
 
 // NOTE: The implementation of all inverses need to be aware of the fact
@@ -1444,7 +1448,7 @@ void av1_iht32x32_1024_add_c(const tran_low_t *input, uint8_t *dest, int stride,
   // transpose
   for (i = 0; i < 32; i++) {
     for (j = 0; j < 32; j++) {
-#if CONFIG_DAALA_DCT32
+#if CONFIG_DAALA_DCT32 && !CONFIG_DAALA_TX
       tmp[j][i] = out[i][j] * 4;
 #else
       tmp[j][i] = out[i][j];
@@ -1462,7 +1466,9 @@ void av1_iht32x32_1024_add_c(const tran_low_t *input, uint8_t *dest, int stride,
     for (j = 0; j < 32; ++j) {
       int d = i * stride + j;
       int s = j * outstride + i;
-#if CONFIG_DAALA_DCT32
+#if CONFIG_DAALA_TX
+      dest[d] = clip_pixel_add(dest[d], ROUND_POWER_OF_TWO(outp[s], 4));
+#elif CONFIG_DAALA_DCT32
       dest[d] = clip_pixel_add(dest[d], ROUND_POWER_OF_TWO(outp[s], 5));
 #else
       dest[d] = clip_pixel_add(dest[d], ROUND_POWER_OF_TWO(outp[s], 6));
