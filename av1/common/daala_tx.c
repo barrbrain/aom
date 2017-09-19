@@ -5411,6 +5411,7 @@ void daala_idct32(const tran_low_t *input, tran_low_t *output) {
   for (i = 0; i < 32; i++) output[i] = (tran_low_t)x[i];
 }
 
+#if 0
 /* Preserve the "half-right" transform behavior. */
 void daala_fdst32(const tran_low_t *input, tran_low_t *output) {
   int i;
@@ -5436,6 +5437,33 @@ void daala_idst32(const tran_low_t *input, tran_low_t *output) {
   }
   daala_idct16(inputhalf, output + 16);
 }
+#else
+void daala_fdst32(const tran_low_t *input, tran_low_t *output) {
+  int i;
+  tx_real in[32];
+  tx_real out[32];
+  for (i = 0; i < 32; i++) {
+    in[i] = input[i];
+  }
+  tx_real_fdstIV_32(out, in, 1);
+  for (i = 0; i < 32; i++) {
+    output[i] = (tran_low_t)round(out[i]);
+  }
+}
+
+void daala_idst32(const tran_low_t *input, tran_low_t *output) {
+  int i;
+  tx_real in[32];
+  tx_real out[32];
+  for (i = 0; i < 32; i++) {
+    in[i] = input[i];
+  }
+  tx_real_idstIV_32(out, 1, in);
+  for (i = 0; i < 32; i++) {
+    output[i] = (tran_low_t)round(out[i]);
+  }
+}
+#endif
 
 void daala_idtx32(const tran_low_t *input, tran_low_t *output) {
   int i;
