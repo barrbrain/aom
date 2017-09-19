@@ -1246,8 +1246,7 @@ static INLINE TX_TYPE av1_get_tx_type(PLANE_TYPE plane_type,
     return DCT_DCT;
   }
 #endif  // CONFIG_MRC_TX
-  if (xd->lossless[mbmi->segment_id] || txsize_sqr_map[tx_size] > TX_32X32 ||
-      (txsize_sqr_map[tx_size] >= TX_32X32 && !is_inter_block(mbmi)))
+  if (xd->lossless[mbmi->segment_id] || txsize_sqr_map[tx_size] > TX_32X32)
     return DCT_DCT;
   if (plane_type == PLANE_TYPE_Y) {
 #if !ALLOW_INTRA_EXT_TX
