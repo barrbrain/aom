@@ -946,18 +946,6 @@ static const int num_ext_tx_set[EXT_TX_SET_TYPES] = {
   1, 2, 2, 3, 5, 7, 12, 16
 };
 
-// Maps intra set index to the set type
-static const int ext_tx_set_type_intra[EXT_TX_SETS_INTRA] = {
-  EXT_TX_SET_DCTONLY, EXT_TX_SET_DTT4_IDTX_1DDCT, EXT_TX_SET_DTT4_IDTX,
-  EXT_TX_SET_MRC_DCT
-};
-
-// Maps inter set index to the set type
-static const int ext_tx_set_type_inter[EXT_TX_SETS_INTER] = {
-  EXT_TX_SET_DCTONLY, EXT_TX_SET_ALL16, EXT_TX_SET_DTT9_IDTX_1DDCT,
-  EXT_TX_SET_DCT_IDTX, EXT_TX_SET_MRC_DCT_IDTX
-};
-
 // Maps set types above to the indices used for intra
 static const int ext_tx_set_index_intra[EXT_TX_SET_TYPES] = { 0, -1, 3,  -1,
                                                               2, 1,  -1, -1 };
@@ -968,17 +956,6 @@ static const int ext_tx_set_index_inter[EXT_TX_SET_TYPES] = { 0,  3,  -1, 4,
 #else   // CONFIG_MRC_TX
 // Number of transform types in each set type
 static const int num_ext_tx_set[EXT_TX_SET_TYPES] = { 1, 2, 5, 7, 12, 16 };
-
-// Maps intra set index to the set type
-static const int ext_tx_set_type_intra[EXT_TX_SETS_INTRA] = {
-  EXT_TX_SET_DCTONLY, EXT_TX_SET_DTT4_IDTX_1DDCT, EXT_TX_SET_DTT4_IDTX
-};
-
-// Maps inter set index to the set type
-static const int ext_tx_set_type_inter[EXT_TX_SETS_INTER] = {
-  EXT_TX_SET_DCTONLY, EXT_TX_SET_ALL16, EXT_TX_SET_DTT9_IDTX_1DDCT,
-  EXT_TX_SET_DCT_IDTX
-};
 
 // Maps set types above to the indices used for intra
 static const int ext_tx_set_index_intra[EXT_TX_SET_TYPES] = { 0, -1, 2,
