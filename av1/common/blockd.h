@@ -987,8 +987,7 @@ static INLINE TxSetType get_ext_tx_set_type(TX_SIZE tx_size, BLOCK_SIZE bs,
       return EXT_TX_SET_MRC_DCT;
   }
 #endif  // CONFIG_MRC_TX
-  if (tx_size_sqr_up == TX_32X32)
-    return is_inter ? EXT_TX_SET_DCT_IDTX : EXT_TX_SET_DCTONLY;
+  if (tx_size_sqr_up == TX_32X32) return EXT_TX_SET_DCT_IDTX;
   if (is_inter)
     return (tx_size_sqr == TX_16X16 ? EXT_TX_SET_DTT9_IDTX_1DDCT
                                     : EXT_TX_SET_ALL16);
@@ -1351,8 +1350,7 @@ static INLINE TX_TYPE av1_get_tx_type(PLANE_TYPE plane_type,
     return DCT_DCT;
   }
 #endif  // CONFIG_MRC_TX
-  if (xd->lossless[mbmi->segment_id] || txsize_sqr_map[tx_size] > TX_32X32 ||
-      (txsize_sqr_map[tx_size] >= TX_32X32 && !is_inter_block(mbmi)))
+  if (xd->lossless[mbmi->segment_id] || txsize_sqr_map[tx_size] > TX_32X32)
     return DCT_DCT;
   if (mbmi->sb_type >= BLOCK_8X8 || CONFIG_CB4X4) {
     if (plane_type == PLANE_TYPE_Y) {
