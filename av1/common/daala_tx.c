@@ -4418,30 +4418,853 @@ void daala_idct32(const tran_low_t *input, tran_low_t *output) {
   for (i = 0; i < 32; i++) output[i] = (tran_low_t)x[i];
 }
 
-/* Preserve the "half-right" transform behavior. */
-void daala_fdst32(const tran_low_t *input, tran_low_t *output) {
-  int i;
-  tran_low_t inputhalf[16];
-  for (i = 0; i < 16; ++i) {
-    output[16 + i] = input[i];
-  }
-  for (i = 0; i < 16; ++i) {
-    inputhalf[i] = input[i + 16];
-  }
-  daala_fdct16(inputhalf, output);
+#define OD_RSHIFT_ROUND(_a, _b) (((_a) + (1 << (_b) >> 1)) >> (_b))
+
+#if 0
+#define OD_MULTIPLY(value, mult) \
+ OD_RSHIFT_ROUND((value)*(mult).scale, (mult).shift)
+#else
+#define OD_MULTIPLY(value, mult) ((od_coeff)floor((value)*(mult).real + 0.5))
+#endif
+
+struct od_mult {
+  double real;
+  int scale;
+  signed char shift;
+};
+
+typedef struct od_mult od_mult;
+
+od_mult OD_DSTIV_32_MULTS[39*3] = {
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+  /* Sin[Pi/4] */
+  { 0.70710678118654752440084436210485, 11585, 14 },
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+
+  /* Tan[7*Pi/32] */
+  { 0.82067879082866033097228198533101,  6723, 13 },
+  /* Sin[7*Pi/16] */
+  { 0.98078528040323044912618223613424, 16069, 15 },
+  /* Tan[7*Pi/32] */
+  { 0.82067879082866033097228198533101,  6723, 13 },
+
+  /* Tan[5*Pi/32] */
+  { 0.53451113595079164108968596129536, 17515, 15 },
+  /* Sin[5*Pi/16] */
+  { 0.83146961230254523707878837761791, 13623, 14 },
+  /* Tan[5*Pi/32] */
+  { 0.53451113595079164108968596129536, 17515, 15 },
+
+/* Group 1 */
+
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+  /* Sin[Pi/4] */
+  { 0.70710678118654752440084436210485, 11585, 14 },
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+
+  /* Tan[Pi/32] */
+  { 0.098491403357164253077197521291327, 3227, 15 },
+  /* Sin[Pi/16] */
+  { 0.19509032201612826784828486847702,  6393, 15 },
+  /* Tan[Pi/32] */
+  { 0.098491403357164253077197521291327, 3227, 15 },
+
+  /* Tan[3*Pi/32] */
+  { 0.30334668360734239167588394694130,  2485, 13 },
+  /* Sin[3*Pi/16] */
+  { 0.55557023301960222474283081394853, 18205, 15 },
+  /* Tan[3*Pi/32] */
+  { 0.30334668360734239167588394694130,  2485, 13 },
+
+/* Group 2 */
+
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+  /* Sin[Pi/4] */
+  { 0.70710678118654752440084436210485, 11585, 14 },
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+
+/* Group 3 */
+
+  /* Tan[Pi/16] */
+  { 0.19891236737965800691159762264468,  3259, 14 },
+  /* Sin[Pi/8] */
+  { 0.38268343236508977172845998403040,  3135, 13 },
+  /* Tan[Pi/16] */
+  { 0.19891236737965800691159762264468,  3259, 14 },
+
+  /* Tan[Pi/16] */
+  { 0.19891236737965800691159762264468,  3259, 14 },
+  /* Sin[Pi/8] */
+  { 0.38268343236508977172845998403040,  3135, 13 },
+  /* Tan[Pi/16] */
+  { 0.19891236737965800691159762264468,  3259, 14 },
+
+/* Group 4 */
+
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+  /* Sin[Pi/4] */
+  { 0.70710678118654752440084436210485, 11585, 14 },
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+
+/* Group 5 */
+
+  /* Tan[Pi/16] */
+  { 0.19891236737965800691159762264468,  3259, 14 },
+  /* Sin[Pi/8] */
+  { 0.38268343236508977172845998403040,  3135, 13 },
+  /* Tan[Pi/16] */
+  { 0.19891236737965800691159762264468,  3259, 14 },
+
+  /* Tan[3*Pi/16] */
+  { 0.66817863791929891999775768652308, 21895, 15 },
+  /* Sin[3*Pi/8] */
+  { 0.92387953251128675612818318939679, 15137, 14 },
+  /* Tan[3*Pi/16] */
+  { 0.66817863791929891999775768652308, 21895, 15 },
+
+/* Group 6 */
+
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+  /* Sin[Pi/4] */
+  { 0.70710678118654752440084436210485, 11585, 14 },
+  /* Tan[Pi/8] */
+  { 0.41421356237309504880168872420970, 13573, 15 },
+
+/* Group 7 */
+
+  /* Tan[3*Pi/16] */
+  { 0.66817863791929891999775768652308, 21895, 15 },
+  /* Sin[3*Pi/8] */
+  { 0.92387953251128675612818318939679, 15137, 14 },
+  /* Tan[3*Pi/16] */
+  { 0.66817863791929891999775768652308, 21895, 15 },
+
+  /* Tan[3*Pi/16] */
+  { 0.66817863791929891999775768652308, 21895, 15 },
+  /* Sin[3*Pi/8] */
+  { 0.92387953251128675612818318939679, 15137, 14 },
+  /* Tan[3*Pi/16] */
+  { 0.66817863791929891999775768652308, 21895, 15 },
+
+/* Stage 2 */
+
+  /* Tan[15*Pi/64] */
+  { 0.90634716901914715794614271726891, 21895, 15 },
+  /* Sin[15*Pi/32] */
+  { 0.99518472667219688624483695310948, 15137, 14 },
+  /* Tan[15*Pi/64] */
+  { 0.90634716901914715794614271726891, 21895, 15 },
+
+  /* Tan[13*Pi/64] */
+  { 0.74165054627203536958126669117208, 21895, 15 },
+  /* Sin[13*Pi/32] */
+  { 0.95694033573220886493579788698027, 15137, 14 },
+  /* Tan[13*Pi/64] */
+  { 0.74165054627203536958126669117208, 21895, 15 },
+
+  /* Tan[11*Pi/64] */
+  { 0.59937693368192376627138986901440, 21895, 15 },
+  /* Sin[11*Pi/32] */
+  { 0.88192126434835502971275686366039, 15137, 14 },
+  /* Tan[11*Pi/64] */
+  { 0.59937693368192376627138986901440, 21895, 15 },
+
+  /* Tan[9*Pi/64] */
+  { 0.47296477589131992812443823797299, 21895, 15 },
+  /* Sin[9*Pi/32] */
+  { 0.77301045336273696081090660975847, 15137, 14 },
+  /* Tan[9*Pi/64] */
+  { 0.47296477589131992812443823797299, 21895, 15 },
+
+  /* Tan[Pi/64] */
+  { 0.049126849769467254105343321271314, 21895, 15 },
+  /* Sin[Pi/32] */
+  { 0.098017140329560601994195563888642, 15137, 14 },
+  /* Tan[Pi/64] */
+  { 0.049126849769467254105343321271314, 21895, 15 },
+
+  /* Tan[3*Pi/64] */
+  { 0.14833598753834742875367651148691, 21895, 15 },
+  /* Sin[3*Pi/32] */
+  { 0.29028467725446236763619237581740, 15137, 14 },
+  /* Tan[3*Pi/64] */
+  { 0.14833598753834742875367651148691, 21895, 15 },
+
+  /* Tan[5*Pi/64] */
+  { 0.25048696019130546159570216012472, 21895, 15 },
+  /* Sin[5*Pi/32] */
+  { 0.47139673682599764855638762590525, 15137, 14 },
+  /* Tan[5*Pi/64] */
+  { 0.25048696019130546159570216012472, 21895, 15 },
+
+  /* Tan[7*Pi/64] */
+  { 0.35780572131452410467248774377447, 21895, 15 },
+  /* Sin[7*Pi/32] */
+  { 0.63439328416364549821517161322549, 15137, 14 },
+  /* Tan[7*Pi/64] */
+  { 0.35780572131452410467248774377447, 21895, 15 },
+
+/* Stage 5 */
+
+  /* Tan[63*Pi/256] */
+  { 0.97575264993237653232496227146104, 21895, 15 },
+  /* Sin[63*Pi/128] */
+  { 0.99969881869620422011576564966617, 15137, 14 },
+  /* Tan[63*Pi/256] */
+  { 0.97575264993237653232496227146104, 21895, 15 },
+
+  /* Tan[31*Pi/256] */
+  { 0.39990819851453720036918353847331, 21895, 15 },
+  /* Sin[31*Pi/128] */
+  { 0.68954054473706692461673062995748, 15137, 14 },
+  /* Tan[31*Pi/256] */
+  { 0.39990819851453720036918353847331, 21895, 15 },
+
+  /* Tan[47*Pi/256] */
+  { 0.65057136208015329352996805965812, 21895, 15 },
+  /* Sin[47*Pi/128] */
+  { 0.91420975570353065463501482939358, 15137, 14 },
+  /* Tan[47*Pi/256] */
+  { 0.65057136208015329352996805965812, 21895, 15 },
+
+  /* Tan[15*Pi/256] */
+  { 0.18618539952758373156923591053706, 21895, 15 },
+  /* Sin[15*Pi/128] */
+  { 0.35989503653498814877510457232676, 15137, 14 },
+  /* Tan[15*Pi/256] */
+  { 0.18618539952758373156923591053706, 21895, 15 },
+
+  /* Tan[5*Pi/256] */
+  { 0.061436352581593764043058907875143, 21895, 15 },
+  /* Sin[5*Pi/128] */
+  { 0.12241067519921619849870447415095, 15137, 14 },
+  /* Tan[5*Pi/256] */
+  { 0.061436352581593764043058907875143, 21895, 15 },
+
+  /* Tan[21*Pi/256] */
+  { 0.26356965989991799543596973676084, 21895, 15 },
+  /* Sin[21*Pi/128] */
+  { 0.49289819222978403687302668875881, 15137, 14 },
+  /* Tan[21*Pi/256] */
+  { 0.26356965989991799543596973676084, 21895, 15 },
+
+  /* Tan[27*Pi/256] */
+  { 0.34402260159242632526836210714028, 21895, 15 },
+  /* Sin[27*Pi/128] */
+  { 0.61523159058062684548491356341398, 15137, 14 },
+  /* Tan[27*Pi/256] */
+  { 0.34402260159242632526836210714028, 21895, 15 },
+
+  /* Tan[11*Pi/256] */
+  { 0.13581627870938772425400726969451, 21895, 15 },
+  /* Sin[11*Pi/128] */
+  { 0.26671275747489838632528651511644, 15137, 14 },
+  /* Tan[11*Pi/256] */
+  { 0.13581627870938772425400726969451, 21895, 15 },
+
+  /* Tan[7*Pi/256] */
+  { 0.086114851197627907877938811075226, 21895, 15 },
+  /* Sin[7*Pi/128] */
+  { 0.17096188876030122636364235720826,  15137, 14 },
+  /* Tan[7*Pi/256] */
+  { 0.086114851197627907877938811075226, 21895, 15 },
+
+  /* Tan[41*Pi/256] */
+  { 0.55039405553726402348701340373870, 21895, 15 },
+  /* Sin[41*Pi/128] */
+  { 0.84485356524970707325957120510496, 15137, 14 },
+  /* Tan[41*Pi/256] */
+  { 0.55039405553726402348701340373870, 21895, 15 },
+
+  /* Tan[25*Pi/256] */
+  { 0.31679852695260378420821618246085, 21895, 15 },
+  /* Sin[25*Pi/128] */
+  { 0.57580819141784530074597245381573, 15137, 14 },
+  /* Tan[25*Pi/256] */
+  { 0.31679852695260378420821618246085, 21895, 15 },
+
+  /* Tan[55*Pi/256] */
+  { 0.80034544949932010247589852380633, 21895, 15 },
+  /* Sin[55*Pi/128] */
+  { 0.97570213003852854446039576641953, 15137, 14 },
+  /* Tan[55*Pi/256] */
+  { 0.80034544949932010247589852380633, 21895, 15 },
+
+  /* Tan[3*Pi/256] */
+  { 0.036832180994845640342522319965926, 21895, 15 },
+  /* Sin[3*Pi/128] */
+  { 0.073564563599667423529465621575234, 15137, 14 },
+  /* Tan[3*Pi/256] */
+  { 0.036832180994845640342522319965926, 21895, 15 },
+
+  /* Tan[45*Pi/256] */
+  { 0.61618192609486605681147999462914, 21895, 15 },
+  /* Sin[45*Pi/128] */
+  { 0.89322430119551532034241644749340, 15137, 14 },
+  /* Tan[45*Pi/256] */
+  { 0.61618192609486605681147999462914, 21895, 15 },
+
+  /* Tan[29*Pi/256] */
+  { 0.37171042261274342506815670618311, 21895, 15 },
+  /* Sin[29*Pi/128] */
+  { 0.65317284295377676408420301365631, 15137, 14 },
+  /* Tan[29*Pi/256] */
+  { 0.37171042261274342506815670618311, 21895, 15 },
+
+  /* Tan[13*Pi/256] */
+  { 0.16090136245348916624522775917636, 21895, 15 },
+  /* Sin[13*Pi/128] */
+  { 0.31368174039889147665647884599410, 15137, 14 },
+  /* Tan[13*Pi/256] */
+  { 0.16090136245348916624522775917636, 21895, 15 },
+
+};
+
+/* Embedded 32-point orthonormal Type-IV fDST. */
+#define OD_FDST_32(t0, tg, t8, to, t4, tk, tc, ts, t2, ti, ta, tq, t6, tm, \
+ te, tu, t1, th, t9, tp, t5, tl, td, tt, t3, tj, tb, tr, t7, tn, tf, tv) \
+  /* 117 "muls" */ \
+  do { \
+    od_coeff t0h; \
+    od_coeff t1h; \
+    od_coeff t2h; \
+    od_coeff t3h; \
+    od_coeff t4h; \
+    od_coeff t6h; \
+    od_coeff t8h; \
+    od_coeff t9h; \
+    od_coeff tah; \
+    od_coeff tbh; \
+    od_coeff tch; \
+    od_coeff tdh; \
+    od_coeff teh; \
+    od_coeff tfh; \
+    od_coeff tgh; \
+    od_coeff thh; \
+    od_coeff tih; \
+    od_coeff tjh; \
+    od_coeff tkh; \
+    od_coeff tlh; \
+    od_coeff tmh; \
+    od_coeff tnh; \
+    od_coeff tph; \
+    od_coeff trh; \
+    od_coeff tsh; \
+    od_coeff tth; \
+    od_coeff tuh; \
+    od_coeff tvh; \
+    /* Stage 0 */ \
+    tq -= OD_MULTIPLY(t5, OD_DSTIV_32_MULTS[0*3 + 0]); \
+    t5 += OD_MULTIPLY(tq, OD_DSTIV_32_MULTS[0*3 + 1]); \
+    tq -= OD_MULTIPLY(t5, OD_DSTIV_32_MULTS[0*3 + 2]); \
+    tp -= OD_MULTIPLY(t6, OD_DSTIV_32_MULTS[3*3 + 0]); \
+    t6 += OD_MULTIPLY(tp, OD_DSTIV_32_MULTS[3*3 + 1]); \
+    tp -= OD_MULTIPLY(t6, OD_DSTIV_32_MULTS[3*3 + 2]); \
+    tu -= OD_MULTIPLY(t1, OD_DSTIV_32_MULTS[6*3 + 0]); \
+    t1 += OD_MULTIPLY(tu, OD_DSTIV_32_MULTS[6*3 + 1]); \
+    tu -= OD_MULTIPLY(t1, OD_DSTIV_32_MULTS[6*3 + 2]); \
+    t2 -= OD_MULTIPLY(tt, OD_DSTIV_32_MULTS[7*3 + 0]); \
+    tt += OD_MULTIPLY(t2, OD_DSTIV_32_MULTS[7*3 + 1]); \
+    t2 -= OD_MULTIPLY(tt, OD_DSTIV_32_MULTS[7*3 + 2]); \
+    ts -= OD_MULTIPLY(t3, OD_DSTIV_32_MULTS[8*3 + 0]); \
+    t3 += OD_MULTIPLY(ts, OD_DSTIV_32_MULTS[8*3 + 1]); \
+    ts -= OD_MULTIPLY(t3, OD_DSTIV_32_MULTS[8*3 + 2]); \
+    t9 -= OD_MULTIPLY(tm, OD_DSTIV_32_MULTS[9*3 + 0]); \
+    tm += OD_MULTIPLY(t9, OD_DSTIV_32_MULTS[9*3 + 1]); \
+    t9 -= OD_MULTIPLY(tm, OD_DSTIV_32_MULTS[9*3 + 2]); \
+    ta -= OD_MULTIPLY(tl, OD_DSTIV_32_MULTS[10*3 + 0]); \
+    tl += OD_MULTIPLY(ta, OD_DSTIV_32_MULTS[10*3 + 1]); \
+    ta -= OD_MULTIPLY(tl, OD_DSTIV_32_MULTS[10*3 + 2]); \
+    tb -= OD_MULTIPLY(tk, OD_DSTIV_32_MULTS[11*3 + 0]); \
+    tk += OD_MULTIPLY(tb, OD_DSTIV_32_MULTS[11*3 + 1]); \
+    tb -= OD_MULTIPLY(tk, OD_DSTIV_32_MULTS[11*3 + 2]); \
+    th -= OD_MULTIPLY(te, OD_DSTIV_32_MULTS[12*3 + 0]); \
+    te += OD_MULTIPLY(th, OD_DSTIV_32_MULTS[12*3 + 1]); \
+    th -= OD_MULTIPLY(te, OD_DSTIV_32_MULTS[12*3 + 2]); \
+    tj -= OD_MULTIPLY(tc, OD_DSTIV_32_MULTS[13*3 + 0]); \
+    tc += OD_MULTIPLY(tj, OD_DSTIV_32_MULTS[13*3 + 1]); \
+    tj -= OD_MULTIPLY(tc, OD_DSTIV_32_MULTS[13*3 + 2]); \
+    td -= OD_MULTIPLY(ti, OD_DSTIV_32_MULTS[14*3 + 0]); \
+    ti += OD_MULTIPLY(td, OD_DSTIV_32_MULTS[14*3 + 1]); \
+    td -= OD_MULTIPLY(ti, OD_DSTIV_32_MULTS[14*3 + 2]); \
+    /* Stage 1 */ \
+    t5 = tr - t5; \
+    tr -= OD_DCT_RSHIFT(t5, 1); \
+    tq += t4; \
+    t4 = OD_DCT_RSHIFT(tq, 1) - t4; \
+    t7 += t6; \
+    t6 -= OD_DCT_RSHIFT(t7, 1); \
+    to += tp; \
+    tp = OD_DCT_RSHIFT(to, 1) - tp; \
+    tu += t0; \
+    tuh = OD_DCT_RSHIFT(tu, 1); \
+    t0 -= tuh; \
+    t1 -= tv; \
+    t1h = OD_DCT_RSHIFT(t1, 1); \
+    tv += t1h; \
+    ts -= t2; \
+    tsh = OD_DCT_RSHIFT(ts, 1); \
+    t2 += tsh; \
+    t3 += tt; \
+    t3h = OD_DCT_RSHIFT(t3, 1); \
+    tt = t3h - tt; \
+    t9 = t8 - t9; \
+    t9h = OD_DCT_RSHIFT(t9, 1); \
+    t8 -= t9h; \
+    tm -= tn; \
+    tmh = OD_DCT_RSHIFT(tm, 1); \
+    tn += tmh; \
+    tb += ta; \
+    tbh = OD_DCT_RSHIFT(tb, 1); \
+    ta -= tbh; \
+    tk += tl; \
+    tkh = OD_DCT_RSHIFT(tk, 1); \
+    tl = tkh - tl; \
+    tf += te; \
+    tfh = OD_DCT_RSHIFT(tf, 1); \
+    te -= tfh; \
+    tg += th; \
+    tgh = OD_DCT_RSHIFT(tg, 1); \
+    th = tgh - th; \
+    ti -= tc; \
+    tih = OD_DCT_RSHIFT(ti, 1); \
+    tc += tih; \
+    td += tj; \
+    tdh = OD_DCT_RSHIFT(td, 1); \
+    tj -= tdh; \
+    /* Stage 2 */ \
+    t4 -= OD_MULTIPLY(tr, OD_DSTIV_32_MULTS[1*3 + 0]); \
+    tr += OD_MULTIPLY(t4, OD_DSTIV_32_MULTS[1*3 + 1]); \
+    t4 -= OD_MULTIPLY(tr, OD_DSTIV_32_MULTS[1*3 + 2]); \
+    tq -= OD_MULTIPLY(t5, OD_DSTIV_32_MULTS[2*3 + 0]); \
+    t5 += OD_MULTIPLY(tq, OD_DSTIV_32_MULTS[2*3 + 1]); \
+    tq -= OD_MULTIPLY(t5, OD_DSTIV_32_MULTS[2*3 + 2]); \
+    to -= OD_MULTIPLY(t7, OD_DSTIV_32_MULTS[4*3 + 0]); \
+    t7 += OD_MULTIPLY(to, OD_DSTIV_32_MULTS[4*3 + 1]); \
+    to -= OD_MULTIPLY(t7, OD_DSTIV_32_MULTS[4*3 + 2]); \
+    tp -= OD_MULTIPLY(t6, OD_DSTIV_32_MULTS[5*3 + 0]); \
+    t6 += OD_MULTIPLY(tp, OD_DSTIV_32_MULTS[5*3 + 1]); \
+    tp -= OD_MULTIPLY(t6, OD_DSTIV_32_MULTS[5*3 + 2]); \
+    /* Stage 3 */ \
+    tp -= OD_DCT_RSHIFT(t5, 1); \
+    t5 += tp; \
+    t4 += OD_DCT_RSHIFT(t7, 1); \
+    t7 = t4 - t7; \
+    tr = OD_DCT_RSHIFT(to, 1) - tr; \
+    to -= tr; \
+    t6 += OD_DCT_RSHIFT(tq, 1); \
+    tq = t6 - tq; \
+    t0 -= tsh; \
+    ts += t0; \
+    tt += tuh; \
+    tu -= tt; \
+    tv += t3h; \
+    t3 -= tv; \
+    t2 -= t1h; \
+    t1 += t2; \
+    tn += tkh; \
+    tk -= tn; \
+    t8 += tbh; \
+    tb -= t8; \
+    tl += t9h; \
+    t9 -= tl; \
+    ta = tmh - ta; \
+    tm = ta - tm; \
+    te -= tdh; \
+    td += te; \
+    tj = tgh - tj; \
+    tg -= tj; \
+    th += tih; \
+    ti = th - ti; \
+    tc -= tfh; \
+    tf += tc; \
+    /* Stage 4 */ \
+    tn -= OD_MULTIPLY(t8, OD_DSTIV_32_MULTS[15*3 + 0]); \
+    t8 += OD_MULTIPLY(tn, OD_DSTIV_32_MULTS[15*3 + 1]); \
+    tn -= OD_MULTIPLY(t8, OD_DSTIV_32_MULTS[15*3 + 2]); \
+    t9 -= OD_MULTIPLY(tm, OD_DSTIV_32_MULTS[16*3 + 0]); \
+    tm += OD_MULTIPLY(t9, OD_DSTIV_32_MULTS[16*3 + 1]); \
+    t9 -= OD_MULTIPLY(tm, OD_DSTIV_32_MULTS[16*3 + 2]); \
+    tl -= OD_MULTIPLY(ta, OD_DSTIV_32_MULTS[17*3 + 0]); \
+    ta += OD_MULTIPLY(tl, OD_DSTIV_32_MULTS[17*3 + 1]); \
+    tl -= OD_MULTIPLY(ta, OD_DSTIV_32_MULTS[17*3 + 2]); \
+    tb -= OD_MULTIPLY(tk, OD_DSTIV_32_MULTS[18*3 + 0]); \
+    tk += OD_MULTIPLY(tb, OD_DSTIV_32_MULTS[18*3 + 1]); \
+    tb -= OD_MULTIPLY(tk, OD_DSTIV_32_MULTS[18*3 + 2]); \
+    tg -= OD_MULTIPLY(tf, OD_DSTIV_32_MULTS[19*3 + 0]); \
+    tf += OD_MULTIPLY(tg, OD_DSTIV_32_MULTS[19*3 + 1]); \
+    tg -= OD_MULTIPLY(tf, OD_DSTIV_32_MULTS[19*3 + 2]); \
+    th -= OD_MULTIPLY(te, OD_DSTIV_32_MULTS[20*3 + 0]); \
+    te += OD_MULTIPLY(th, OD_DSTIV_32_MULTS[20*3 + 1]); \
+    th -= OD_MULTIPLY(te, OD_DSTIV_32_MULTS[20*3 + 2]); \
+    td -= OD_MULTIPLY(ti, OD_DSTIV_32_MULTS[21*3 + 0]); \
+    ti += OD_MULTIPLY(td, OD_DSTIV_32_MULTS[21*3 + 1]); \
+    td -= OD_MULTIPLY(ti, OD_DSTIV_32_MULTS[21*3 + 2]); \
+    tj -= OD_MULTIPLY(tc, OD_DSTIV_32_MULTS[22*3 + 0]); \
+    tc += OD_MULTIPLY(tj, OD_DSTIV_32_MULTS[22*3 + 1]); \
+    tj -= OD_MULTIPLY(tc, OD_DSTIV_32_MULTS[22*3 + 2]); \
+    /* Stage 5 */ \
+    t2 += t5; \
+    t2h = OD_DCT_RSHIFT(t2, 1); \
+    t5 -= t2h; \
+    tt -= tq; \
+    tth = OD_DCT_RSHIFT(tt, 1); \
+    tq += tth; \
+    tp += tu; \
+    tph = OD_DCT_RSHIFT(tp, 1); \
+    tu -= tph; \
+    t6 -= t1; \
+    t6h = OD_DCT_RSHIFT(t6, 1); \
+    t1 += t6h; \
+    tv = t7 - tv; \
+    tvh = OD_DCT_RSHIFT(tv, 1); \
+    t7 = tvh - t7; \
+    t0 -= to; \
+    t0h = OD_DCT_RSHIFT(t0, 1); \
+    to += t0h; \
+    t4 += ts; \
+    t4h = OD_DCT_RSHIFT(t4, 1); \
+    ts -= t4h; \
+    tr -= t3; \
+    trh = OD_DCT_RSHIFT(tr, 1); \
+    t3 += trh; \
+    t8 = tf - t8; \
+    t8h = OD_DCT_RSHIFT(t8, 1); \
+    tf -= t8h; \
+    tn = tg - tn; \
+    tnh = OD_DCT_RSHIFT(tn, 1); \
+    tg -= tnh; \
+    tc -= tb; \
+    tch = OD_DCT_RSHIFT(tc, 1); \
+    tb += tch; \
+    tj += tk; \
+    tjh = OD_DCT_RSHIFT(tj, 1); \
+    tk = tjh - tk; \
+    ta += ti; \
+    tah = OD_DCT_RSHIFT(ta, 1); \
+    ti -= tah; \
+    tl += td; \
+    tlh = OD_DCT_RSHIFT(tl, 1); \
+    td = tlh - td; \
+    te += t9; \
+    teh = OD_DCT_RSHIFT(te, 1); \
+    t9 = teh - t9; \
+    th -= tm; \
+    thh = OD_DCT_RSHIFT(th, 1); \
+    tm += thh; \
+    /* Stage 6 */ \
+    t5 += tah; \
+    ta -= t5; \
+    ti += tth; \
+    tt -= ti; \
+    tq += tlh; \
+    tl = tq - tl; \
+    td -= t2h; \
+    t2 += td; \
+    t9 += tph; \
+    tp -= t9; \
+    t1 += teh; \
+    te -= t1; \
+    tm = t6h - tm; \
+    t6 -= tm; \
+    tu -= thh; \
+    th += tu; \
+    t7 += tnh; \
+    tn = t7 - tn; \
+    tg += t0h; \
+    t0 -= tg; \
+    to -= t8h; \
+    t8 += to; \
+    tf += tvh; \
+    tv -= tf; \
+    tb += t4h; \
+    t4 -= tb; \
+    t3 += tch; \
+    tc -= t3; \
+    tk = trh - tk; \
+    tr = tk - tr; \
+    ts -= tjh; \
+    tj += ts; \
+    /* Stage 7 */ \
+    t0 -= OD_MULTIPLY(tv, OD_DSTIV_32_MULTS[23*3 + 0]); \
+    tv += OD_MULTIPLY(t0, OD_DSTIV_32_MULTS[23*3 + 1]); \
+    t0 -= OD_MULTIPLY(tv, OD_DSTIV_32_MULTS[23*3 + 2]); \
+    tg -= OD_MULTIPLY(tf, OD_DSTIV_32_MULTS[24*3 + 0]); \
+    tf += OD_MULTIPLY(tg, OD_DSTIV_32_MULTS[24*3 + 1]); \
+    tg -= OD_MULTIPLY(tf, OD_DSTIV_32_MULTS[24*3 + 2]); \
+    t8 -= OD_MULTIPLY(tn, OD_DSTIV_32_MULTS[25*3 + 0]); \
+    tn += OD_MULTIPLY(t8, OD_DSTIV_32_MULTS[25*3 + 1]); \
+    t8 -= OD_MULTIPLY(tn, OD_DSTIV_32_MULTS[25*3 + 2]); \
+    to -= OD_MULTIPLY(t7, OD_DSTIV_32_MULTS[26*3 + 0]); \
+    t7 += OD_MULTIPLY(to, OD_DSTIV_32_MULTS[26*3 + 1]); \
+    to -= OD_MULTIPLY(t7, OD_DSTIV_32_MULTS[26*3 + 2]); \
+    tt -= OD_MULTIPLY(t2, OD_DSTIV_32_MULTS[27*3 + 0]); \
+    t2 += OD_MULTIPLY(tt, OD_DSTIV_32_MULTS[27*3 + 1]); \
+    tt -= OD_MULTIPLY(t2, OD_DSTIV_32_MULTS[27*3 + 2]); \
+    tl -= OD_MULTIPLY(ta, OD_DSTIV_32_MULTS[28*3 + 0]); \
+    ta += OD_MULTIPLY(tl, OD_DSTIV_32_MULTS[28*3 + 1]); \
+    tl -= OD_MULTIPLY(ta, OD_DSTIV_32_MULTS[28*3 + 2]); \
+    ti -= OD_MULTIPLY(td, OD_DSTIV_32_MULTS[29*3 + 0]); \
+    td += OD_MULTIPLY(ti, OD_DSTIV_32_MULTS[29*3 + 1]); \
+    ti -= OD_MULTIPLY(td, OD_DSTIV_32_MULTS[29*3 + 2]); \
+    tq -= OD_MULTIPLY(t5, OD_DSTIV_32_MULTS[30*3 + 0]); \
+    t5 += OD_MULTIPLY(tq, OD_DSTIV_32_MULTS[30*3 + 1]); \
+    tq -= OD_MULTIPLY(t5, OD_DSTIV_32_MULTS[30*3 + 2]); \
+    ts -= OD_MULTIPLY(t3, OD_DSTIV_32_MULTS[31*3 + 0]); \
+    t3 += OD_MULTIPLY(ts, OD_DSTIV_32_MULTS[31*3 + 1]); \
+    ts -= OD_MULTIPLY(t3, OD_DSTIV_32_MULTS[31*3 + 2]); \
+    tb -= OD_MULTIPLY(tk, OD_DSTIV_32_MULTS[32*3 + 0]); \
+    tk += OD_MULTIPLY(tb, OD_DSTIV_32_MULTS[32*3 + 1]); \
+    tb -= OD_MULTIPLY(tk, OD_DSTIV_32_MULTS[32*3 + 2]); \
+    tj -= OD_MULTIPLY(tc, OD_DSTIV_32_MULTS[33*3 + 0]); \
+    tc += OD_MULTIPLY(tj, OD_DSTIV_32_MULTS[33*3 + 1]); \
+    tj -= OD_MULTIPLY(tc, OD_DSTIV_32_MULTS[33*3 + 2]); \
+    t4 -= OD_MULTIPLY(tr, OD_DSTIV_32_MULTS[34*3 + 0]); \
+    tr += OD_MULTIPLY(t4, OD_DSTIV_32_MULTS[34*3 + 1]); \
+    t4 -= OD_MULTIPLY(tr, OD_DSTIV_32_MULTS[34*3 + 2]); \
+    tu -= OD_MULTIPLY(t1, OD_DSTIV_32_MULTS[35*3 + 0]); \
+    t1 += OD_MULTIPLY(tu, OD_DSTIV_32_MULTS[35*3 + 1]); \
+    tu -= OD_MULTIPLY(t1, OD_DSTIV_32_MULTS[35*3 + 2]); \
+    t9 -= OD_MULTIPLY(tm, OD_DSTIV_32_MULTS[36*3 + 0]); \
+    tm += OD_MULTIPLY(t9, OD_DSTIV_32_MULTS[36*3 + 1]); \
+    t9 -= OD_MULTIPLY(tm, OD_DSTIV_32_MULTS[36*3 + 2]); \
+    th -= OD_MULTIPLY(te, OD_DSTIV_32_MULTS[37*3 + 0]); \
+    te += OD_MULTIPLY(th, OD_DSTIV_32_MULTS[37*3 + 1]); \
+    th -= OD_MULTIPLY(te, OD_DSTIV_32_MULTS[37*3 + 2]); \
+    tp -= OD_MULTIPLY(t6, OD_DSTIV_32_MULTS[38*3 + 0]); \
+    t6 += OD_MULTIPLY(tp, OD_DSTIV_32_MULTS[38*3 + 1]); \
+    tp -= OD_MULTIPLY(t6, OD_DSTIV_32_MULTS[38*3 + 2]); \
+  } \
+  while (0)
+
+void od_bin_fdst32(od_coeff y[32], const od_coeff *x, int xstride) {
+  od_coeff t0;
+  od_coeff t1;
+  od_coeff t2;
+  od_coeff t3;
+  od_coeff t4;
+  od_coeff t5;
+  od_coeff t6;
+  od_coeff t7;
+  od_coeff t8;
+  od_coeff t9;
+  od_coeff ta;
+  od_coeff tb;
+  od_coeff tc;
+  od_coeff td;
+  od_coeff te;
+  od_coeff tf;
+  od_coeff tg;
+  od_coeff th;
+  od_coeff ti;
+  od_coeff tj;
+  od_coeff tk;
+  od_coeff tl;
+  od_coeff tm;
+  od_coeff tn;
+  od_coeff to;
+  od_coeff tp;
+  od_coeff tq;
+  od_coeff tr;
+  od_coeff ts;
+  od_coeff tt;
+  od_coeff tu;
+  od_coeff tv;
+  t0 = x[0*xstride];
+  t1 = x[1*xstride];
+  t2 = x[2*xstride];
+  t3 = x[3*xstride];
+  t4 = x[4*xstride];
+  t5 = x[5*xstride];
+  t6 = x[6*xstride];
+  t7 = x[7*xstride];
+  t8 = x[8*xstride];
+  t9 = x[9*xstride];
+  ta = x[10*xstride];
+  tb = x[11*xstride];
+  tc = x[12*xstride];
+  td = x[13*xstride];
+  te = x[14*xstride];
+  tf = x[15*xstride];
+  tg = x[16*xstride];
+  th = x[17*xstride];
+  ti = x[18*xstride];
+  tj = x[19*xstride];
+  tk = x[20*xstride];
+  tl = x[21*xstride];
+  tm = x[22*xstride];
+  tn = x[23*xstride];
+  to = x[24*xstride];
+  tp = x[25*xstride];
+  tq = x[26*xstride];
+  tr = x[27*xstride];
+  ts = x[28*xstride];
+  tt = x[29*xstride];
+  tu = x[30*xstride];
+  tv = x[31*xstride];
+  OD_FDST_32(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, ta, tb, tc, td, te, tf,
+   tg, th, ti, tj, tk, tl, tm, tn, to, tp, tq, tr, ts, tt, tu, tv);
+  y[0] = t0;
+  y[1] = tg;
+  y[2] = t8;
+  y[3] = to;
+  y[4] = t4;
+  y[5] = tk;
+  y[6] = tc;
+  y[7] = ts;
+  y[8] = t2;
+  y[9] = ti;
+  y[10] = ta;
+  y[11] = tq;
+  y[12] = t6;
+  y[13] = tm;
+  y[14] = te;
+  y[15] = tu;
+  y[16] = t1;
+  y[17] = th;
+  y[18] = t9;
+  y[19] = tp;
+  y[20] = t5;
+  y[21] = tl;
+  y[22] = td;
+  y[23] = tt;
+  y[24] = t3;
+  y[25] = tj;
+  y[26] = tb;
+  y[27] = tr;
+  y[28] = t7;
+  y[29] = tn;
+  y[30] = tf;
+  y[31] = tv;
 }
 
-/* Preserve the "half-right" transform behavior. */
+void od_bin_idst32(od_coeff *x, int xstride, const od_coeff y[32]) {
+  od_coeff t0;
+  od_coeff t1;
+  od_coeff t2;
+  od_coeff t3;
+  od_coeff t4;
+  od_coeff t5;
+  od_coeff t6;
+  od_coeff t7;
+  od_coeff t8;
+  od_coeff t9;
+  od_coeff ta;
+  od_coeff tb;
+  od_coeff tc;
+  od_coeff td;
+  od_coeff te;
+  od_coeff tf;
+  od_coeff tg;
+  od_coeff th;
+  od_coeff ti;
+  od_coeff tj;
+  od_coeff tk;
+  od_coeff tl;
+  od_coeff tm;
+  od_coeff tn;
+  od_coeff to;
+  od_coeff tp;
+  od_coeff tq;
+  od_coeff tr;
+  od_coeff ts;
+  od_coeff tt;
+  od_coeff tu;
+  od_coeff tv;
+  t0 = y[0];
+  tg = y[1];
+  t8 = y[2];
+  to = y[3];
+  t4 = y[4];
+  tk = y[5];
+  tc = y[6];
+  ts = y[7];
+  t2 = y[8];
+  ti = y[9];
+  ta = y[10];
+  tq = y[11];
+  t6 = y[12];
+  tm = y[13];
+  te = y[14];
+  tu = y[15];
+  t1 = y[16];
+  th = y[17];
+  t9 = y[18];
+  tp = y[19];
+  t5 = y[20];
+  tl = y[21];
+  td = y[22];
+  tt = y[23];
+  t3 = y[24];
+  tj = y[25];
+  tb = y[26];
+  tr = y[27];
+  t7 = y[28];
+  tn = y[29];
+  tf = y[30];
+  tv = y[31];
+  /* Hack until we OD_IDST_32 exists */
+  OD_FDST_32(t0, tg, t8, to, t4, tk, tc, ts, t2, ti, ta, tq, t6, tm, te, tu,
+   t1, th, t9, tp, t5, tl, td, tt, t3, tj, tb, tr, t7, tn, tf, tv);
+  x[0*xstride] = t0;
+  x[1*xstride] = t1;
+  x[2*xstride] = t2;
+  x[3*xstride] = t3;
+  x[4*xstride] = t4;
+  x[5*xstride] = t5;
+  x[6*xstride] = t6;
+  x[7*xstride] = t7;
+  x[8*xstride] = t8;
+  x[9*xstride] = t9;
+  x[10*xstride] = ta;
+  x[11*xstride] = tb;
+  x[12*xstride] = tc;
+  x[13*xstride] = td;
+  x[14*xstride] = te;
+  x[15*xstride] = tf;
+  x[16*xstride] = tg;
+  x[17*xstride] = th;
+  x[18*xstride] = ti;
+  x[19*xstride] = tj;
+  x[20*xstride] = tk;
+  x[21*xstride] = tl;
+  x[22*xstride] = tm;
+  x[23*xstride] = tn;
+  x[24*xstride] = to;
+  x[25*xstride] = tp;
+  x[26*xstride] = tq;
+  x[27*xstride] = tr;
+  x[28*xstride] = ts;
+  x[29*xstride] = tt;
+  x[30*xstride] = tu;
+  x[31*xstride] = tv;
+}
+
+void daala_fdst32(const tran_low_t *input, tran_low_t *output) {
+  int i;
+  od_coeff x[32];
+  od_coeff y[32];
+  for (i = 0; i < 32; i++) x[i] = (od_coeff)input[i];
+  od_bin_fdst32(y, x, 1);
+  for (i = 0; i < 32; i++) output[i] = (tran_low_t)y[i];
+}
+
 void daala_idst32(const tran_low_t *input, tran_low_t *output) {
   int i;
-  tran_low_t inputhalf[16];
-  for (i = 0; i < 16; ++i) {
-    inputhalf[i] = input[i];
-  }
-  for (i = 0; i < 16; ++i) {
-    output[i] = input[16 + i];
-  }
-  daala_idct16(inputhalf, output + 16);
+  od_coeff x[32];
+  od_coeff y[32];
+  for (i = 0; i < 32; i++) y[i] = input[i];
+  od_bin_idst32(x, 1, y);
+  for (i = 0; i < 32; i++) output[i] = (tran_low_t)x[i];
 }
 
 void daala_idtx32(const tran_low_t *input, tran_low_t *output) {
