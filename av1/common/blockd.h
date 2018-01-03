@@ -530,6 +530,7 @@ typedef struct cfl_ctx {
   //      (only Q2 is required, but Q3 is used to avoid shifts)
   //   2. Stores Q3 AC contributions (step1 - tx block avg)
   int16_t pred_buf_q3[CFL_BUF_SQUARE];
+  int pred_buf_stride;
 
   // Cache the DC_PRED when performing RDO, so it does not have to be recomputed
   // for every scaling parameter

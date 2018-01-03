@@ -95,8 +95,8 @@ class CFLSubtractTest : public ::testing::TestWithParam<subtract_param> {
     int k = 0;
     for (int j = 0; j < height; j++) {
       for (int i = 0; i < width; i++) {
-        pred_buf_data[j * CFL_BUF_LINE + i] = k;
-        pred_buf_data_ref[j * CFL_BUF_LINE + i] = k++;
+        pred_buf_data[j * width + i] = k;
+        pred_buf_data_ref[j * width + i] = k++;
       }
     }
   }
@@ -156,8 +156,8 @@ class CFLPredictTest : public ::testing::TestWithParam<predict_param> {
       for (int i = 0; i < width; i++) {
         chroma_pels[j * CFL_BUF_LINE + i] = dc;
         chroma_pels_ref[j * CFL_BUF_LINE + i] = dc;
-        sub_luma_pels_ref[j * CFL_BUF_LINE + i] =
-            sub_luma_pels[j * CFL_BUF_LINE + i] = rnd.Rand8() - 128;
+        sub_luma_pels_ref[j * width + i] =
+            sub_luma_pels[j * width + i] = rnd.Rand8() - 128;
       }
     }
   }
@@ -182,8 +182,8 @@ class CFLSumBlockTest : public ::testing::TestWithParam<sum_block_param> {
     for (int j = 0; j < height; j++) {
       for (int i = 0; i < width; i++) {
         const int16_t d = rnd.Rand15Signed();
-        data[j * CFL_BUF_LINE + i] = d;
-        data_ref[j * CFL_BUF_LINE + i] = d;
+        data[j * width + i] = d;
+        data_ref[j * width + i] = d;
       }
     }
   }
@@ -202,9 +202,9 @@ TEST_P(CFLSubtractTest, SubtractTest) {
     av1_cfl_subtract_c(pred_buf_data_ref, width, height, k);
     for (int j = 0; j < height; j++) {
       for (int i = 0; i < width; i++) {
-        ASSERT_EQ(pred_buf_data[j * CFL_BUF_LINE + i],
-                  pred_buf_data_ref[j * CFL_BUF_LINE + i]);
-        ASSERT_EQ(pred_buf_data[j * CFL_BUF_LINE + i], -k);
+        ASSERT_EQ(pred_buf_data[j * width + i],
+                  pred_buf_data_ref[j * width + i]);
+        ASSERT_EQ(pred_buf_data[j * width + i], -k);
         k--;
       }
     }
@@ -243,9 +243,9 @@ TEST_P(CFLSubsampleTest, SubsampleTest) {
 
   for (int it = 0; it < NUM_ITERATIONS; it++) {
     init(width, height);
-    subsample(1, 1)(luma_pels, CFL_BUF_LINE, sub_luma_pels, width, height);
+    subsample(1, 1)(luma_pels, CFL_BUF_LINE, sub_luma_pels, CFL_BUF_LINE, width, height);
     get_subsample_lbd_fn_c(1, 1)(luma_pels_ref, CFL_BUF_LINE, sub_luma_pels_ref,
-                                 width, height);
+                                 CFL_BUF_LINE, width, height);
     for (int j = 0; j < height; j++) {
       for (int i = 0; i < width; i++) {
         ASSERT_EQ(sub_luma_pels_ref[j * CFL_BUF_LINE + i],
@@ -266,15 +266,15 @@ TEST_P(CFLSubsampleTest, DISABLED_SubsampleSpeedTest) {
   aom_usec_timer_start(&ref_timer);
   for (int k = 0; k < NUM_ITERATIONS_SPEED; k++) {
     get_subsample_lbd_fn_c(1, 1)(luma_pels, CFL_BUF_LINE, sub_luma_pels, width,
-                                 height);
+                                 CFL_BUF_LINE, height);
   }
   aom_usec_timer_mark(&ref_timer);
   int ref_elapsed_time = (int)aom_usec_timer_elapsed(&ref_timer);
 
   aom_usec_timer_start(&timer);
   for (int k = 0; k < NUM_ITERATIONS_SPEED; k++) {
-    subsample(1, 1)(luma_pels_ref, CFL_BUF_LINE, sub_luma_pels_ref, width,
-                    height);
+    subsample(1, 1)(luma_pels_ref, CFL_BUF_LINE, sub_luma_pels_ref, CFL_BUF_LINE,
+                    width, height);
   }
   aom_usec_timer_mark(&timer);
   int elapsed_time = (int)aom_usec_timer_elapsed(&timer);

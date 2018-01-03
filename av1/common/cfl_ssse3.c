@@ -29,8 +29,9 @@
  */
 static void cfl_luma_subsampling_420_lbd_ssse3(const uint8_t *input,
                                                int input_stride,
-                                               int16_t *pred_buf_q3, int width,
-                                               int height) {
+                                               int16_t *pred_buf_q3,
+					       int out_stride,
+                                               int width, int height) {
   const __m128i twos = _mm_set1_epi8(2);  // Sixteen twos
 
   // Sixteen int8 values fit in one __m128i register. If this is enough to do
@@ -43,14 +44,14 @@ static void cfl_luma_subsampling_420_lbd_ssse3(const uint8_t *input,
   //     4      32
   //     8      32
   //    16      8
-  const int next_chroma = CFL_BUF_LINE >> ((width == 16) << 1);
+  const int next_chroma = (width == 16) ? 8 : out_stride;
 
   // When the width is less than 16, we double the stride, because we process
   // four lines by iteration (instead of two).
   const int luma_stride = input_stride << (1 + (width < 16));
-  const int chroma_stride = CFL_BUF_LINE << (width < 16);
+  const int chroma_stride = out_stride << (width < 16);
 
-  const int16_t *end = pred_buf_q3 + height * CFL_BUF_LINE;
+  const int16_t *end = pred_buf_q3 + height * out_stride;
   do {
     // Load 16 values for the top and bottom rows.
     // t_0, t_1, ... t_15
@@ -72,9 +73,15 @@ static void cfl_luma_subsampling_420_lbd_ssse3(const uint8_t *input,
     next_bot = _mm_maddubs_epi16(next_bot, twos);
 
     // Add the 8 values in top with the 8 values in bottom
-    _mm_storeu_si128((__m128i *)pred_buf_q3, _mm_add_epi16(top, bot));
-    _mm_storeu_si128((__m128i *)(pred_buf_q3 + next_chroma),
-                     _mm_add_epi16(next_top, next_bot));
+    if (width > 4) {
+      _mm_storeu_si128((__m128i *)pred_buf_q3, _mm_add_epi16(top, bot));
+      _mm_storeu_si128((__m128i *)(pred_buf_q3 + next_chroma),
+                       _mm_add_epi16(next_top, next_bot));
+    } else {
+      _mm_storel_epi64((__m128i *)pred_buf_q3, _mm_add_epi16(top, bot));
+      _mm_storel_epi64((__m128i *)(pred_buf_q3 + next_chroma),
+                       _mm_add_epi16(next_top, next_bot));
+    }
 
     input += luma_stride;
     pred_buf_q3 += chroma_stride;
@@ -120,31 +127,36 @@ static INLINE void cfl_predict_lbd_x(const int16_t *pred_buf_q3, uint8_t *dst,
     __m128i scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3),
                                                       alpha_q12, alpha_sign);
     __m128i tmp0 = _mm_add_epi16(scaled_luma_q0, dc_q0);
-    __m128i tmp1 = tmp0;
-    if (width != 4) {
-      scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3 + 8),
+    scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3 + 8),
                                                 alpha_q12, alpha_sign);
-      tmp1 = _mm_add_epi16(scaled_luma_q0, dc_q0);
-    }
+    __m128i tmp1 = _mm_add_epi16(scaled_luma_q0, dc_q0);
     __m128i res = _mm_packus_epi16(tmp0, tmp1);
-    if (width == 4)
-      _mm_store_ss((float *)(dst), (__m128)res);
-    else if (width == 8)
+    if (width == 4) {
+      int64_t lo = _mm_cvtsi128_si64(res);
+      int64_t hi = _mm_cvtsi128_si64(_mm_unpackhi_epi64(res, res));
+      *(int32_t *)(dst + 0 * dst_stride) = lo;
+      *(int32_t *)(dst + 1 * dst_stride) = lo >> 32;
+      *(int32_t *)(dst + 2 * dst_stride) = hi;
+      *(int32_t *)(dst + 3 * dst_stride) = hi >> 32;
+    } else if (width == 8) {
       _mm_storel_epi64((__m128i *)(dst), res);
-    else
+      _mm_storel_epi64((__m128i *)(dst + dst_stride), _mm_unpackhi_epi64(res, res));
+    } else
       _mm_storeu_si128((__m128i *)(dst), res);
     if (width == 32) {
-      scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3 + 16),
+      pred_buf_q3 += 16;
+      scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3),
                                                 alpha_q12, alpha_sign);
       tmp0 = _mm_add_epi16(scaled_luma_q0, dc_q0);
-      scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3 + 24),
-                                                alpha_q12, alpha_sign);
+      scaled_luma_q0 = get_scaled_luma_q0_ssse3((__m128i *)(pred_buf_q3 + 8),
+                                                  alpha_q12, alpha_sign);
       tmp1 = _mm_add_epi16(scaled_luma_q0, dc_q0);
       res = _mm_packus_epi16(tmp0, tmp1);
       _mm_storeu_si128((__m128i *)(dst + 16), res);
+      dst += dst_stride;
     }
-    dst += dst_stride;
-    pred_buf_q3 += CFL_BUF_LINE;
+    dst += dst_stride * (16 / width);
+    pred_buf_q3 += 16;
   } while (dst < row_end);
 }
 
@@ -178,15 +190,13 @@ cfl_predict_lbd_fn get_predict_lbd_fn_ssse3(TX_SIZE tx_size) {
 
 static INLINE __m128i sum_4x4_ssse3(int16_t *pred_buf) {
   const __m128i zeros = _mm_setzero_si128();
-  __m128i r0 = _mm_loadl_epi64((__m128i *)pred_buf);
-  __m128i r1 = _mm_loadl_epi64((__m128i *)(pred_buf + CFL_BUF_LINE));
-  __m128i r2 = _mm_loadl_epi64((__m128i *)(pred_buf + 2 * CFL_BUF_LINE));
-  __m128i r3 = _mm_loadl_epi64((__m128i *)(pred_buf + 3 * CFL_BUF_LINE));
+  __m128i r0 = _mm_loadu_si128((__m128i *)pred_buf);
+  __m128i r2 = _mm_loadu_si128((__m128i *)(pred_buf + 2 * 4));
 
   // At this stage in CfL, the maximum value in the CfL prediction buffer can
   // only reach 15 bit, so it is safe to do one addition inside 16 bit.
   // r0 = r0_0 + r2_0, r1_0 + r3_0, ..., r0_3 + r2_3, r1_3 + r3_3
-  r0 = _mm_unpacklo_epi16(_mm_add_epi16(r0, r1), _mm_add_epi16(r2, r3));
+  r0 = _mm_add_epi16(r0, r2);
 
   // For the other additions, we need to convert to 32 bits.
   // To do so, we add the low part with the high part.
@@ -210,7 +220,7 @@ static int sum_block_4x4_ssse3(int16_t *pred_buf) {
 
 static int sum_block_4x8_ssse3(int16_t *pred_buf) {
   return horz_sum_ssse3(_mm_add_epi32(
-      sum_4x4_ssse3(pred_buf), sum_4x4_ssse3(pred_buf + 4 * CFL_BUF_LINE)));
+      sum_4x4_ssse3(pred_buf), sum_4x4_ssse3(pred_buf + 4 * 4)));
 }
 
 static INLINE __m128i sum_8x4_ssse3(int16_t *pred_buf, int o1, int o2) {
@@ -228,15 +238,15 @@ static INLINE __m128i sum_8x4_ssse3(int16_t *pred_buf, int o1, int o2) {
   return _mm_add_epi32(r0, r2);
 }
 
-#define SUM_8X4_SSSE3(p) sum_8x4_ssse3(p, CFL_BUF_LINE, 2 * CFL_BUF_LINE)
-#define SUM_16X2_SSSE3(p) sum_8x4_ssse3(p, 8, CFL_BUF_LINE)
+#define SUM_8X4_SSSE3(p) sum_8x4_ssse3(p,  8, 16)
+#define SUM_16X2_SSSE3(p) sum_8x4_ssse3(p, 8, 16)
 #define SUM_32X1_SSSE3(p) sum_8x4_ssse3(p, 8, 16)
 
 static int sum_block_8xh_ssse3(int16_t *pred_buf, int height) {
   __m128i r0 = _mm_setzero_si128();
   for (height >>= 2; height; --height) {
     r0 = _mm_add_epi32(r0, SUM_8X4_SSSE3(pred_buf));
-    pred_buf += 4 * CFL_BUF_LINE;
+    pred_buf += 4 * 8;
   }
   return horz_sum_ssse3(r0);
 }
@@ -257,7 +267,7 @@ static int sum_block_16xh_ssse3(int16_t *pred_buf, int height) {
   __m128i r0 = _mm_setzero_si128();
   for (height >>= 1; height; --height) {
     r0 = _mm_add_epi32(r0, SUM_16X2_SSSE3(pred_buf));
-    pred_buf += 2 * CFL_BUF_LINE;
+    pred_buf += 2 * 16;
   }
   return horz_sum_ssse3(r0);
 }
@@ -278,7 +288,7 @@ static int sum_block_32xh_ssse3(int16_t *pred_buf, int height) {
   __m128i r0 = _mm_setzero_si128();
   while (height--) {
     r0 = _mm_add_epi32(r0, SUM_32X1_SSSE3(pred_buf));
-    pred_buf += CFL_BUF_LINE;
+    pred_buf += 32;
   }
   return horz_sum_ssse3(r0);
 }

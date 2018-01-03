@@ -15,7 +15,7 @@
 #include "av1/common/blockd.h"
 
 typedef void (*cfl_subsample_lbd_fn)(const uint8_t *input, int input_stride,
-                                     int16_t *output_q3, int width, int height);
+                                     int16_t *output_q3, int out_stride, int width, int height);
 
 typedef void (*cfl_predict_lbd_fn)(const int16_t *pred_buf_q3, uint8_t *dst,
                                    int dst_stride, TX_SIZE tx_size,
@@ -55,13 +55,13 @@ void cfl_load_dc_pred(MACROBLOCKD *const xd, uint8_t *dst, int dst_stride,
 
 // TODO(ltrudeau) Remove this when 422 SIMD is added
 void cfl_luma_subsampling_422_lbd(const uint8_t *input, int input_stride,
-                                  int16_t *output_q3, int width, int height);
+                                  int16_t *output_q3, int out_stride, int width, int height);
 // TODO(ltrudeau) Remove this when 440 SIMD is added
 void cfl_luma_subsampling_440_lbd(const uint8_t *input, int input_stride,
-                                  int16_t *output_q3, int width, int height);
+                                  int16_t *output_q3, int out_stride, int width, int height);
 // TODO(ltrudeau) Remove this when 444 SIMD is added
 void cfl_luma_subsampling_444_lbd(const uint8_t *input, int input_stride,
-                                  int16_t *output_q3, int width, int height);
+                                  int16_t *output_q3, int out_stride, int width, int height);
 
 static INLINE int cfl_sum_block_null(int16_t *pred_buf_q3) {
   (void)pred_buf_q3;

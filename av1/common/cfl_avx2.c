@@ -28,22 +28,12 @@ void av1_cfl_subtract_avx2(int16_t *pred_buf_q3, int width, int height,
                            int16_t avg_q3) {
   const __m256i avg_x16 = _mm256_set1_epi16(avg_q3);
 
-  // Sixteen int16 values fit in one __m256i register. If this is enough to do
-  // the entire row, we move to the next row (stride ==32), otherwise we move to
-  // the next sixteen values.
-  //   width   next
-  //     4      32
-  //     8      32
-  //    16      32
-  //    32      16
-  const int stride = CFL_BUF_LINE >> (width == 32);
-
-  const int16_t *end = pred_buf_q3 + height * CFL_BUF_LINE;
+  const int16_t *end = pred_buf_q3 + height * width;
   do {
     __m256i val_x16 = _mm256_loadu_si256((__m256i *)pred_buf_q3);
     _mm256_storeu_si256((__m256i *)pred_buf_q3,
                         _mm256_sub_epi16(val_x16, avg_x16));
-  } while ((pred_buf_q3 += stride) < end);
+  } while ((pred_buf_q3 += 16) < end);
 }
 
 /**
@@ -60,13 +50,14 @@ void av1_cfl_subtract_avx2(int16_t *pred_buf_q3, int width, int height,
  */
 static void cfl_luma_subsampling_420_lbd_avx2(const uint8_t *input,
                                               int input_stride,
-                                              int16_t *pred_buf_q3, int width,
-                                              int height) {
+                                              int16_t *pred_buf_q3,
+					      int out_stride,
+                                              int width, int height) {
   (void)width;  // Max chroma width is 16, so all widths fit in one __m256i
 
   const __m256i twos = _mm256_set1_epi8(2);  // Thirty two twos
   const int luma_stride = input_stride << 1;
-  const int16_t *end = pred_buf_q3 + height * CFL_BUF_LINE;
+  const int16_t *end = pred_buf_q3 + height * out_stride;
   do {
     // Load 32 values for the top and bottom rows.
     // t_0, t_1, ... t_31
@@ -84,7 +75,7 @@ static void cfl_luma_subsampling_420_lbd_avx2(const uint8_t *input,
     _mm256_storeu_si256((__m256i *)pred_buf_q3, _mm256_add_epi16(top, bot));
 
     input += luma_stride;
-    pred_buf_q3 += CFL_BUF_LINE;
+    pred_buf_q3 += out_stride;
   } while (pred_buf_q3 < end);
 }
 
@@ -117,7 +108,7 @@ static INLINE void cfl_predict_lbd_x(const int16_t *pred_buf_q3, uint8_t *dst,
   const __m256i alpha_q12 = _mm256_set1_epi16(abs(alpha_q3) * (1 << 9));
   const __m256i alpha_sign = _mm256_set1_epi16(alpha_q3 < 0 ? -1 : 1);
   const __m256i dc_q0 = _mm256_set1_epi16(*dst);
-  const int16_t *row_end = pred_buf_q3 + height * CFL_BUF_LINE;
+  const int16_t *row_end = pred_buf_q3 + height * width;
   do {
     __m256i scaled_luma_q0 =
         get_scaled_luma_q0_avx2((__m256i *)pred_buf_q3, alpha_q12, alpha_sign);
@@ -129,9 +120,12 @@ static INLINE void cfl_predict_lbd_x(const int16_t *pred_buf_q3, uint8_t *dst,
       tmp1 = _mm256_add_epi16(scaled_luma_q0, dc_q0);
     }
     __m256i res = _mm256_packus_epi16(tmp0, tmp1);
-    if (width == 4)
+    if (width == 4) {
       *(int32_t *)dst = _mm256_extract_epi32(res, 0);
-    else if (width == 8)
+      *(int32_t *)(dst + dst_stride) = _mm256_extract_epi32(res, 1);
+      *(int32_t *)(dst + 2 * dst_stride) = _mm256_extract_epi32(res, 2);
+      *(int32_t *)(dst + 3 * dst_stride) = _mm256_extract_epi32(res, 3);
+    } else if (width == 8)
       _mm_storel_epi64((__m128i *)dst, _mm256_castsi256_si128(res));
     else if (width == 16) {
       res = _mm256_permute4x64_epi64(res, 0xD8);
@@ -140,8 +134,8 @@ static INLINE void cfl_predict_lbd_x(const int16_t *pred_buf_q3, uint8_t *dst,
       res = _mm256_permute4x64_epi64(res, 0xD8);
       _mm256_storeu_si256((__m256i *)dst, res);
     }
-    dst += dst_stride;
-    pred_buf_q3 += CFL_BUF_LINE;
+    dst += dst_stride * (32 / width);
+    pred_buf_q3 += 32;
   } while (pred_buf_q3 < row_end);
 }
 
