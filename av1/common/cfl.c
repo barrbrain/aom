@@ -157,11 +157,12 @@ static INLINE int cfl_idx_to_alpha(int alpha_idx, int joint_sign,
 
 static INLINE void cfl_predict_lbd_c(const int16_t *pred_buf_q3, uint8_t *dst,
                                      int dst_stride, int alpha_q3, int width,
-                                     int height) {
+                                     int height, int shift) {
   for (int j = 0; j < height; j++) {
     for (int i = 0; i < width; i++) {
+      int alpha_q12 = alpha_q3 * (1 << 9) + ((alpha_q3 > 0) - (alpha_q3 < 0)) * (abs(pred_buf_q3[i]) << 4 >> shift);
       dst[i] =
-          clip_pixel(get_scaled_luma_q0(alpha_q3, pred_buf_q3[i]) + dst[i]);
+          clip_pixel(get_scaled_luma_q0(alpha_q12, pred_buf_q3[i]) + dst[i]);
     }
     dst += dst_stride;
     pred_buf_q3 += CFL_BUF_LINE;
@@ -170,11 +171,12 @@ static INLINE void cfl_predict_lbd_c(const int16_t *pred_buf_q3, uint8_t *dst,
 
 // Null function used for invalid tx_sizes
 void cfl_predict_lbd_null(const int16_t *pred_buf_q3, uint8_t *dst,
-                          int dst_stride, int alpha_q3) {
+                          int dst_stride, int alpha_q3, int shift) {
   (void)pred_buf_q3;
   (void)dst;
   (void)dst_stride;
   (void)alpha_q3;
+  (void)shift;
   assert(0);
 }
 
@@ -182,11 +184,12 @@ CFL_PREDICT_FN(c, lbd)
 
 void cfl_predict_hbd_c(const int16_t *pred_buf_q3, uint16_t *dst,
                        int dst_stride, int alpha_q3, int bit_depth, int width,
-                       int height) {
+                       int height, int shift) {
   for (int j = 0; j < height; j++) {
     for (int i = 0; i < width; i++) {
+      int alpha_q12 = alpha_q3 * (1 << 9) + ((alpha_q3 > 0) - (alpha_q3 < 0)) * (abs(pred_buf_q3[i]) << 4 >> shift);
       dst[i] = clip_pixel_highbd(
-          get_scaled_luma_q0(alpha_q3, pred_buf_q3[i]) + dst[i], bit_depth);
+          get_scaled_luma_q0(alpha_q12, pred_buf_q3[i]) + dst[i], bit_depth);
     }
     dst += dst_stride;
     pred_buf_q3 += CFL_BUF_LINE;
@@ -195,12 +198,13 @@ void cfl_predict_hbd_c(const int16_t *pred_buf_q3, uint16_t *dst,
 
 // Null function used for invalid tx_sizes
 void cfl_predict_hbd_null(const int16_t *pred_buf_q3, uint16_t *dst,
-                          int dst_stride, int alpha_q3, int bd) {
+                          int dst_stride, int alpha_q3, int bd, int shift) {
   (void)pred_buf_q3;
   (void)dst;
   (void)dst_stride;
   (void)alpha_q3;
   (void)bd;
+  (void)shift;
   assert(0);
 }
 
@@ -228,13 +232,16 @@ void cfl_predict_block(MACROBLOCKD *const xd, uint8_t *dst, int dst_stride,
       cfl_idx_to_alpha(mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs, plane - 1);
   assert((tx_size_high[tx_size] - 1) * CFL_BUF_LINE + tx_size_wide[tx_size] <=
          CFL_BUF_SQUARE);
+  int shift = mbmi->cfl_alpha_shift;
+  if (plane == AOM_PLANE_V) shift &= 0xf;
+  else shift >>= 4;
   if (get_bitdepth_data_path_index(xd)) {
     uint16_t *dst_16 = CONVERT_TO_SHORTPTR(dst);
     get_predict_hbd_fn(tx_size)(cfl->pred_buf_q3, dst_16, dst_stride, alpha_q3,
-                                xd->bd);
+                                xd->bd, shift);
     return;
   }
-  get_predict_lbd_fn(tx_size)(cfl->pred_buf_q3, dst, dst_stride, alpha_q3);
+  get_predict_lbd_fn(tx_size)(cfl->pred_buf_q3, dst, dst_stride, alpha_q3, shift);
 }
 
 // Null function used for invalid tx_sizes

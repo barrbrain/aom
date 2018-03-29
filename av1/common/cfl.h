@@ -30,9 +30,9 @@ static INLINE CFL_ALLOWED_TYPE is_cfl_allowed(const MACROBLOCKD *xd) {
                             block_size_high[bsize] <= 32);
 }
 
-static INLINE int get_scaled_luma_q0(int alpha_q3, int16_t pred_buf_q3) {
-  int scaled_luma_q6 = alpha_q3 * pred_buf_q3;
-  return ROUND_POWER_OF_TWO_SIGNED(scaled_luma_q6, 6);
+static INLINE int get_scaled_luma_q0(int alpha_q12, int16_t pred_buf_q3) {
+  int scaled_luma_q15 = alpha_q12 * pred_buf_q3;
+  return ROUND_POWER_OF_TWO_SIGNED(scaled_luma_q15, 15);
 }
 
 static INLINE CFL_PRED_TYPE get_cfl_pred_type(PLANE_TYPE plane) {
@@ -191,17 +191,17 @@ static INLINE void cfl_subtract_average_null(int16_t *pred_buf_q3) {
 #define CFL_PREDICT_lbd(arch, width, height)                                 \
   void predict_lbd_##width##x##height##_##arch(const int16_t *pred_buf_q3,   \
                                                uint8_t *dst, int dst_stride, \
-                                               int alpha_q3) {               \
+                                               int alpha_q3, int shift) {    \
     cfl_predict_lbd_##arch(pred_buf_q3, dst, dst_stride, alpha_q3, width,    \
-                           height);                                          \
+                           height, shift);                                   \
   }
 
 #define CFL_PREDICT_hbd(arch, width, height)                                  \
   void predict_hbd_##width##x##height##_##arch(const int16_t *pred_buf_q3,    \
                                                uint16_t *dst, int dst_stride, \
-                                               int alpha_q3, int bd) {        \
+                                               int alpha_q3, int bd, int shift) { \
     cfl_predict_hbd_##arch(pred_buf_q3, dst, dst_stride, alpha_q3, bd, width, \
-                           height);                                           \
+                           height, shift);                                    \
   }
 
 // This wrapper exists because clang format does not like calling macros with
@@ -211,11 +211,11 @@ static INLINE void cfl_subtract_average_null(int16_t *pred_buf_q3) {
 
 // Null function used for invalid tx_sizes
 void cfl_predict_lbd_null(const int16_t *pred_buf_q3, uint8_t *dst,
-                          int dst_stride, int alpha_q3);
+                          int dst_stride, int alpha_q3, int shift);
 
 // Null function used for invalid tx_sizes
 void cfl_predict_hbd_null(const int16_t *pred_buf_q3, uint16_t *dst,
-                          int dst_stride, int alpha_q3, int bd);
+                          int dst_stride, int alpha_q3, int bd, int shift);
 
 #define CFL_PREDICT_FN(arch, bd)                                          \
   CFL_PREDICT_X(arch, 4, 4, bd)                                           \

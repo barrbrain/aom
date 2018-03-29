@@ -267,9 +267,9 @@ TEST_P(CFLSubsampleTest, DISABLED_SubsampleSpeedTest) {
 TEST_P(CFLPredictTest, PredictTest) {
   for (int it = 0; it < NUM_ITERATIONS; it++) {
     init(8);
-    fun_under_test(tx_size)(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3);
+    fun_under_test(tx_size)(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3, 15);
     get_predict_lbd_fn_c(tx_size)(sub_luma_pels_ref, chroma_pels_ref,
-                                  CFL_BUF_LINE, alpha_q3);
+                                  CFL_BUF_LINE, alpha_q3, 15);
 
     assert_eq<uint8_t>(chroma_pels, chroma_pels_ref, width, height);
   }
@@ -284,7 +284,7 @@ TEST_P(CFLPredictTest, DISABLED_PredictSpeedTest) {
   aom_usec_timer_start(&ref_timer);
 
   for (int k = 0; k < NUM_ITERATIONS_SPEED; k++) {
-    predict_impl(sub_luma_pels_ref, chroma_pels_ref, CFL_BUF_LINE, alpha_q3);
+    predict_impl(sub_luma_pels_ref, chroma_pels_ref, CFL_BUF_LINE, alpha_q3, 15);
   }
   aom_usec_timer_mark(&ref_timer);
   int ref_elapsed_time = (int)aom_usec_timer_elapsed(&ref_timer);
@@ -292,7 +292,7 @@ TEST_P(CFLPredictTest, DISABLED_PredictSpeedTest) {
   predict_impl = fun_under_test(tx_size);
   aom_usec_timer_start(&timer);
   for (int k = 0; k < NUM_ITERATIONS_SPEED; k++) {
-    predict_impl(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3);
+    predict_impl(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3, 15);
   }
   aom_usec_timer_mark(&timer);
   int elapsed_time = (int)aom_usec_timer_elapsed(&timer);
@@ -306,9 +306,9 @@ TEST_P(CFLPredictHBDTest, PredictHBDTest) {
   for (int it = 0; it < NUM_ITERATIONS; it++) {
     init(bd);
     fun_under_test(tx_size)(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3,
-                            bd);
+                            bd, 15);
     get_predict_hbd_fn_c(tx_size)(sub_luma_pels_ref, chroma_pels_ref,
-                                  CFL_BUF_LINE, alpha_q3, bd);
+                                  CFL_BUF_LINE, alpha_q3, bd, 15);
 
     assert_eq<uint16_t>(chroma_pels, chroma_pels_ref, width, height);
   }
@@ -324,7 +324,7 @@ TEST_P(CFLPredictHBDTest, DISABLED_PredictHBDSpeedTest) {
 
   for (int k = 0; k < NUM_ITERATIONS_SPEED; k++) {
     predict_impl(sub_luma_pels_ref, chroma_pels_ref, CFL_BUF_LINE, alpha_q3,
-                 bd);
+                 bd, 15);
   }
   aom_usec_timer_mark(&ref_timer);
   int ref_elapsed_time = (int)aom_usec_timer_elapsed(&ref_timer);
@@ -332,7 +332,7 @@ TEST_P(CFLPredictHBDTest, DISABLED_PredictHBDSpeedTest) {
   predict_impl = fun_under_test(tx_size);
   aom_usec_timer_start(&timer);
   for (int k = 0; k < NUM_ITERATIONS_SPEED; k++) {
-    predict_impl(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3, bd);
+    predict_impl(sub_luma_pels, chroma_pels, CFL_BUF_LINE, alpha_q3, bd, 15);
   }
   aom_usec_timer_mark(&timer);
   int elapsed_time = (int)aom_usec_timer_elapsed(&timer);
@@ -355,20 +355,24 @@ INSTANTIATE_TEST_CASE_P(SSE2, CFLSubAvgTest,
 const subsample_param subsample_sizes_ssse3[] = { ALL_CFL_TX_SIZES(
     cfl_get_luma_subsampling_420_lbd_ssse3) };
 
+#if 0
 const predict_param predict_sizes_ssse3[] = { ALL_CFL_TX_SIZES(
     get_predict_lbd_fn_ssse3) };
 
 const predict_param_hbd predict_sizes_hbd_ssse3[] = { ALL_CFL_TX_SIZES(
     get_predict_hbd_fn_ssse3) };
+#endif
 
 INSTANTIATE_TEST_CASE_P(SSSE3, CFLSubsampleTest,
                         ::testing::ValuesIn(subsample_sizes_ssse3));
 
+#if 0
 INSTANTIATE_TEST_CASE_P(SSSE3, CFLPredictTest,
                         ::testing::ValuesIn(predict_sizes_ssse3));
 
 INSTANTIATE_TEST_CASE_P(SSSE3, CFLPredictHBDTest,
                         ::testing::ValuesIn(predict_sizes_hbd_ssse3));
+#endif
 #endif
 
 #if HAVE_AVX2
@@ -378,11 +382,13 @@ const sub_avg_param sub_avg_sizes_avx2[] = { ALL_CFL_TX_SIZES(
 const subsample_param subsample_sizes_avx2[] = { ALL_CFL_TX_SIZES(
     cfl_get_luma_subsampling_420_lbd_avx2) };
 
+#if 0
 const predict_param predict_sizes_avx2[] = { ALL_CFL_TX_SIZES(
     get_predict_lbd_fn_avx2) };
 
 const predict_param_hbd predict_sizes_hbd_avx2[] = { ALL_CFL_TX_SIZES(
     get_predict_hbd_fn_avx2) };
+#endif
 
 INSTANTIATE_TEST_CASE_P(AVX2, CFLSubAvgTest,
                         ::testing::ValuesIn(sub_avg_sizes_avx2));
@@ -390,11 +396,13 @@ INSTANTIATE_TEST_CASE_P(AVX2, CFLSubAvgTest,
 INSTANTIATE_TEST_CASE_P(AVX2, CFLSubsampleTest,
                         ::testing::ValuesIn(subsample_sizes_avx2));
 
+#if 0
 INSTANTIATE_TEST_CASE_P(AVX2, CFLPredictTest,
                         ::testing::ValuesIn(predict_sizes_avx2));
 
 INSTANTIATE_TEST_CASE_P(AVX2, CFLPredictHBDTest,
                         ::testing::ValuesIn(predict_sizes_hbd_avx2));
+#endif
 #endif
 
 #if HAVE_NEON

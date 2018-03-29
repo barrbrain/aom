@@ -143,21 +143,27 @@ static UV_PREDICTION_MODE read_intra_mode_uv(FRAME_CONTEXT *ec_ctx,
 }
 
 static int read_cfl_alphas(FRAME_CONTEXT *const ec_ctx, aom_reader *r,
-                           int *signs_out) {
+                           int *signs_out, int *shift_out) {
   const int joint_sign =
       aom_read_symbol(r, ec_ctx->cfl_sign_cdf, CFL_JOINT_SIGNS, "cfl:signs");
   int idx = 0;
+  int shift = 0;
   // Magnitudes are only coded for nonzero values
   if (CFL_SIGN_U(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_u = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_U(joint_sign)];
     idx = aom_read_symbol(r, cdf_u, CFL_ALPHABET_SIZE, "cfl:alpha_u")
           << CFL_ALPHABET_SIZE_LOG2;
+    shift = aom_read_literal(r, 3, "cfl:shift") << 4;
+    // fprintf(stderr, "s_u: %d\n", shift >> 4);
   }
   if (CFL_SIGN_V(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_v = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_V(joint_sign)];
     idx += aom_read_symbol(r, cdf_v, CFL_ALPHABET_SIZE, "cfl:alpha_v");
+    shift += aom_read_literal(r, 3, "cfl:shift");
+    // fprintf(stderr, "s_v: %d\n", shift & 0xf);
   }
   *signs_out = joint_sign;
+  *shift_out = shift;
   return idx;
 }
 
@@ -803,7 +809,7 @@ static void read_intra_frame_mode_info(AV1_COMMON *const cm,
     mbmi->uv_mode =
         read_intra_mode_uv(ec_ctx, r, is_cfl_allowed(xd), mbmi->mode);
     if (mbmi->uv_mode == UV_CFL_PRED) {
-      mbmi->cfl_alpha_idx = read_cfl_alphas(ec_ctx, r, &mbmi->cfl_alpha_signs);
+      mbmi->cfl_alpha_idx = read_cfl_alphas(ec_ctx, r, &mbmi->cfl_alpha_signs, &mbmi->cfl_alpha_shift);
       xd->cfl.store_y = 1;
     } else {
       xd->cfl.store_y = 0;
@@ -1069,7 +1075,7 @@ static void read_intra_block_mode_info(AV1_COMMON *const cm, const int mi_row,
         read_intra_mode_uv(ec_ctx, r, is_cfl_allowed(xd), mbmi->mode);
     if (mbmi->uv_mode == UV_CFL_PRED) {
       mbmi->cfl_alpha_idx =
-          read_cfl_alphas(xd->tile_ctx, r, &mbmi->cfl_alpha_signs);
+          read_cfl_alphas(xd->tile_ctx, r, &mbmi->cfl_alpha_signs, &mbmi->cfl_alpha_shift);
       xd->cfl.store_y = 1;
     } else {
       xd->cfl.store_y = 0;

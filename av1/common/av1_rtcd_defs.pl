@@ -46,10 +46,10 @@ typedef void (*cfl_subsample_hbd_fn)(const uint16_t *input, int input_stride,
 typedef void (*cfl_subtract_average_fn)(int16_t *pred_buf_q3);
 
 typedef void (*cfl_predict_lbd_fn)(const int16_t *pred_buf_q3, uint8_t *dst,
-                                   int dst_stride, int alpha_q3);
+                                   int dst_stride, int alpha_q3, int shift);
 
 typedef void (*cfl_predict_hbd_fn)(const int16_t *pred_buf_q3, uint16_t *dst,
-                                   int dst_stride, int alpha_q3, int bd);
+                                   int dst_stride, int alpha_q3, int bd, int shift);
 EOF
 }
 forward_decls qw/av1_common_forward_decls/;
@@ -349,9 +349,9 @@ add_proto qw/cfl_subsample_lbd_fn cfl_get_luma_subsampling_420_lbd/, "TX_SIZE tx
 specialize qw/cfl_get_luma_subsampling_420_lbd ssse3 avx2 neon/;
 
 add_proto qw/cfl_predict_lbd_fn get_predict_lbd_fn/, "TX_SIZE tx_size";
-specialize qw/get_predict_lbd_fn ssse3 avx2/;
+# specialize qw/get_predict_lbd_fn ssse3 avx2/;
 
 add_proto qw/cfl_predict_hbd_fn get_predict_hbd_fn/, "TX_SIZE tx_size";
-specialize qw/get_predict_hbd_fn ssse3 avx2/;
+# specialize qw/get_predict_hbd_fn ssse3 avx2/;
 
 1;

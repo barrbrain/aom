@@ -50,6 +50,7 @@ void subtract_average_8x8_sse2(int16_t *pred_buf_q3);
 void subtract_average_8x16_sse2(int16_t *pred_buf_q3);
 void subtract_average_8x32_sse2(int16_t *pred_buf_q3);
 
+#if 0
 void predict_lbd_4x4_ssse3(const int16_t *pred_buf_q3, uint8_t *dst,
                            int dst_stride, int alpha_q3);
 void predict_lbd_4x8_ssse3(const int16_t *pred_buf_q3, uint8_t *dst,
@@ -99,3 +100,4 @@ void predict_hbd_16x16_ssse3(const int16_t *pred_buf_q3, uint16_t *dst,
                              int dst_stride, int alpha_q3, int bd);
 void predict_hbd_16x32_ssse3(const int16_t *pred_buf_q3, uint16_t *dst,
                              int dst_stride, int alpha_q3, int bd);
+#endif

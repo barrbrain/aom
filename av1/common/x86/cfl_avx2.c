@@ -110,6 +110,7 @@ static INLINE void cfl_predict_lbd_avx2(const int16_t *pred_buf_q3,
   } while ((row += CFL_BUF_LINE_I256) < row_end);
 }
 
+#if 0
 CFL_PREDICT_X(avx2, 32, 8, lbd);
 CFL_PREDICT_X(avx2, 32, 16, lbd);
 CFL_PREDICT_X(avx2, 32, 32, lbd);
@@ -140,6 +141,7 @@ cfl_predict_lbd_fn get_predict_lbd_fn_avx2(TX_SIZE tx_size) {
               */ /* index the function pointer array out of bounds. */
   return pred[tx_size % TX_SIZES_ALL];
 }
+#endif
 
 static __m256i highbd_max_epi16(int bd) {
   const __m256i neg_one = _mm256_set1_epi16(-1);
@@ -182,6 +184,7 @@ static INLINE void cfl_predict_hbd_avx2(const int16_t *pred_buf_q3,
   } while ((row += CFL_BUF_LINE_I256) < row_end);
 }
 
+#if 0
 CFL_PREDICT_X(avx2, 16, 4, hbd)
 CFL_PREDICT_X(avx2, 16, 8, hbd)
 CFL_PREDICT_X(avx2, 16, 16, hbd)
@@ -216,6 +219,7 @@ cfl_predict_hbd_fn get_predict_hbd_fn_avx2(TX_SIZE tx_size) {
     */ /* index the function pointer array out of bounds. */
   return pred[tx_size % TX_SIZES_ALL];
 }
+#endif
 
 // Returns a vector where all the (32-bits) elements are the sum of all the
 // lanes in a.

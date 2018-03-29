@@ -287,6 +287,8 @@ typedef struct MB_MODE_INFO {
   int cfl_alpha_idx;
   // Joint sign of alpha Cb and alpha Cr
   int cfl_alpha_signs;
+  // Shift
+  int cfl_alpha_shift;
 
   int compound_idx;
   int comp_group_idx;

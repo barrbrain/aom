@@ -4853,6 +4853,7 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
              x->intra_uv_mode_cost[CFL_ALLOWED][mbmi->mode][UV_CFL_PRED], 0);
   int64_t best_rd_uv[CFL_JOINT_SIGNS][CFL_PRED_PLANES];
   int best_c[CFL_JOINT_SIGNS][CFL_PRED_PLANES];
+  int best_s[CFL_JOINT_SIGNS][CFL_PRED_PLANES];
 #if CONFIG_DEBUG
   int best_rate_uv[CFL_JOINT_SIGNS][CFL_PRED_PLANES];
 #endif  // CONFIG_DEBUG
@@ -4863,6 +4864,7 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
     for (int joint_sign = 0; joint_sign < CFL_JOINT_SIGNS; joint_sign++) {
       best_rd_uv[joint_sign][plane] = INT64_MAX;
       best_c[joint_sign][plane] = 0;
+      best_s[joint_sign][plane] = 0;
     }
     // Collect RD stats for an alpha value of zero in this plane.
     // Skip i == CFL_SIGN_ZERO as (0, 0) is invalid.
@@ -4871,6 +4873,7 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
       if (i == CFL_SIGN_NEG) {
         mbmi->cfl_alpha_idx = 0;
         mbmi->cfl_alpha_signs = joint_sign;
+        mbmi->cfl_alpha_shift = 0;
         txfm_rd_in_plane(x, cpi, &rd_stats, best_rd, plane + 1, bsize, tx_size,
                          cpi->sf.use_fast_coef_costing);
         if (rd_stats.rate == INT_MAX) break;
@@ -4894,21 +4897,39 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
         RD_STATS rd_stats;
         if (c > 2 && progress < c) break;
         av1_init_rd_stats(&rd_stats);
+        int local_s = 0;
         for (int i = 0; i < CFL_SIGNS; i++) {
           const int joint_sign = PLANE_SIGN_TO_JOINT_SIGN(plane, pn_sign, i);
           if (i == 0) {
             mbmi->cfl_alpha_idx = (c << CFL_ALPHABET_SIZE_LOG2) + c;
             mbmi->cfl_alpha_signs = joint_sign;
+            int64_t local_rd = best_rd;
+            for (int s = 0; s < 8; ++s) {
+              mbmi->cfl_alpha_shift = (s << 4) + s;
+              av1_init_rd_stats(&rd_stats);
+              txfm_rd_in_plane(x, cpi, &rd_stats, best_rd, plane + 1, bsize,
+                               tx_size, cpi->sf.use_fast_coef_costing);
+              if (rd_stats.rate == INT_MAX) continue;
+              int64_t this_rd =
+                  RDCOST(x->rdmult, rd_stats.rate, rd_stats.dist);
+              if (this_rd < local_rd) {
+                local_rd = this_rd, local_s = s;
+              }
+            }
+            mbmi->cfl_alpha_shift = (local_s << 4) + local_s;
+            av1_init_rd_stats(&rd_stats);
             txfm_rd_in_plane(x, cpi, &rd_stats, best_rd, plane + 1, bsize,
                              tx_size, cpi->sf.use_fast_coef_costing);
             if (rd_stats.rate == INT_MAX) break;
           }
-          const int alpha_rate = x->cfl_cost[joint_sign][plane][c];
+          const int alpha_rate = x->cfl_cost[joint_sign][plane][c] +
+                                 av1_cost_literal(3);
           int64_t this_rd =
               RDCOST(x->rdmult, rd_stats.rate + alpha_rate, rd_stats.dist);
           if (this_rd >= best_rd_uv[joint_sign][plane]) continue;
           best_rd_uv[joint_sign][plane] = this_rd;
           best_c[joint_sign][plane] = c;
+          best_s[joint_sign][plane] = local_s;
 #if CONFIG_DEBUG
           best_rate_uv[joint_sign][plane] = rd_stats.rate;
 #endif  // CONFIG_DEBUG
@@ -4926,10 +4947,15 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
 
   int best_rate_overhead = INT_MAX;
   int ind = 0;
+  int shift = 0;
   if (best_joint_sign >= 0) {
     const int u = best_c[best_joint_sign][CFL_PRED_U];
     const int v = best_c[best_joint_sign][CFL_PRED_V];
+    const int s_u = best_s[best_joint_sign][CFL_PRED_U];
+    const int s_v = best_s[best_joint_sign][CFL_PRED_V];
     ind = (u << CFL_ALPHABET_SIZE_LOG2) + v;
+    shift = (s_u << 4) + s_v;
+    //fprintf(stderr, "shift: %d %d\n", s_u, s_v);
     best_rate_overhead = x->cfl_cost[best_joint_sign][CFL_PRED_U][u] +
                          x->cfl_cost[best_joint_sign][CFL_PRED_V][v];
 #if CONFIG_DEBUG
@@ -4944,6 +4970,7 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
 
   mbmi->cfl_alpha_idx = ind;
   mbmi->cfl_alpha_signs = best_joint_sign;
+  mbmi->cfl_alpha_shift = shift;
   xd->cfl.use_dc_pred_cache = 0;
   xd->cfl.dc_pred_is_cached[0] = 0;
   xd->cfl.dc_pred_is_cached[1] = 0;

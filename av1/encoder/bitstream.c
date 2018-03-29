@@ -847,16 +847,18 @@ static void write_intra_uv_mode(FRAME_CONTEXT *frame_ctx,
 }
 
 static void write_cfl_alphas(FRAME_CONTEXT *const ec_ctx, int idx,
-                             int joint_sign, aom_writer *w) {
+                             int joint_sign, int shift, aom_writer *w) {
   aom_write_symbol(w, joint_sign, ec_ctx->cfl_sign_cdf, CFL_JOINT_SIGNS);
   // Magnitudes are only signaled for nonzero codes.
   if (CFL_SIGN_U(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_u = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_U(joint_sign)];
     aom_write_symbol(w, CFL_IDX_U(idx), cdf_u, CFL_ALPHABET_SIZE);
+    aom_write_literal(w, shift >> 4, 3);
   }
   if (CFL_SIGN_V(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_v = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_V(joint_sign)];
     aom_write_symbol(w, CFL_IDX_V(idx), cdf_v, CFL_ALPHABET_SIZE);
+    aom_write_literal(w, shift & 0xf, 3);
   }
 }
 
@@ -1015,7 +1017,7 @@ static void pack_inter_mode_mvs(AV1_COMP *cpi, const int mi_row,
       const UV_PREDICTION_MODE uv_mode = mbmi->uv_mode;
       write_intra_uv_mode(ec_ctx, uv_mode, mode, is_cfl_allowed(xd), w);
       if (uv_mode == UV_CFL_PRED)
-        write_cfl_alphas(ec_ctx, mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs, w);
+        write_cfl_alphas(ec_ctx, mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs, mbmi->cfl_alpha_shift, w);
       if (use_angle_delta && av1_is_directional_mode(get_uv_mode(uv_mode))) {
         write_angle_delta(w, mbmi->angle_delta[PLANE_TYPE_UV],
                           ec_ctx->angle_delta_cdf[uv_mode - V_PRED]);
@@ -1242,7 +1244,7 @@ static void write_mb_modes_kf(AV1_COMP *cpi, MACROBLOCKD *xd,
     const UV_PREDICTION_MODE uv_mode = mbmi->uv_mode;
     write_intra_uv_mode(ec_ctx, uv_mode, mode, is_cfl_allowed(xd), w);
     if (uv_mode == UV_CFL_PRED)
-      write_cfl_alphas(ec_ctx, mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs, w);
+      write_cfl_alphas(ec_ctx, mbmi->cfl_alpha_idx, mbmi->cfl_alpha_signs, mbmi->cfl_alpha_shift, w);
     if (use_angle_delta && av1_is_directional_mode(get_uv_mode(uv_mode))) {
       write_angle_delta(w, mbmi->angle_delta[PLANE_TYPE_UV],
                         ec_ctx->angle_delta_cdf[uv_mode - V_PRED]);

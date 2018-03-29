@@ -120,7 +120,7 @@ static INLINE void cfl_predict_lbd_ssse3(const int16_t *pred_buf_q3,
   } while ((row += CFL_BUF_LINE_I128) < row_end);
 }
 
-CFL_PREDICT_FN(ssse3, lbd)
+// CFL_PREDICT_FN(ssse3, lbd)
 
 static INLINE __m128i highbd_max_epi16(int bd) {
   const __m128i neg_one = _mm_set1_epi16(-1);
@@ -170,4 +170,4 @@ static INLINE void cfl_predict_hbd_ssse3(const int16_t *pred_buf_q3,
   } while ((row += CFL_BUF_LINE_I128) < row_end);
 }
 
-CFL_PREDICT_FN(ssse3, hbd)
+// CFL_PREDICT_FN(ssse3, hbd)
