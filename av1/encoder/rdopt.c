@@ -4904,7 +4904,7 @@ static int cfl_rd_pick_alpha(MACROBLOCK *const x, const AV1_COMP *const cpi,
             mbmi->cfl_alpha_idx = (c << CFL_ALPHABET_SIZE_LOG2) + c;
             mbmi->cfl_alpha_signs = joint_sign;
             int64_t local_rd = best_rd;
-            for (int s = 0; s < 8; ++s) {
+            for (int s = 0; s < 4; ++s) {
               mbmi->cfl_alpha_shift = (s << 4) + s;
               av1_init_rd_stats(&rd_stats);
               txfm_rd_in_plane(x, cpi, &rd_stats, best_rd, plane + 1, bsize,

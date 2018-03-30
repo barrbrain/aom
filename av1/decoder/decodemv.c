@@ -153,13 +153,13 @@ static int read_cfl_alphas(FRAME_CONTEXT *const ec_ctx, aom_reader *r,
     aom_cdf_prob *cdf_u = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_U(joint_sign)];
     idx = aom_read_symbol(r, cdf_u, CFL_ALPHABET_SIZE, "cfl:alpha_u")
           << CFL_ALPHABET_SIZE_LOG2;
-    shift = aom_read_literal(r, 3, "cfl:shift") << 4;
+    shift = aom_read_literal(r, 2, "cfl:shift") << 4;
     // fprintf(stderr, "s_u: %d\n", shift >> 4);
   }
   if (CFL_SIGN_V(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_v = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_V(joint_sign)];
     idx += aom_read_symbol(r, cdf_v, CFL_ALPHABET_SIZE, "cfl:alpha_v");
-    shift += aom_read_literal(r, 3, "cfl:shift");
+    shift += aom_read_literal(r, 2, "cfl:shift");
     // fprintf(stderr, "s_v: %d\n", shift & 0xf);
   }
   *signs_out = joint_sign;

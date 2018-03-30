@@ -853,12 +853,12 @@ static void write_cfl_alphas(FRAME_CONTEXT *const ec_ctx, int idx,
   if (CFL_SIGN_U(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_u = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_U(joint_sign)];
     aom_write_symbol(w, CFL_IDX_U(idx), cdf_u, CFL_ALPHABET_SIZE);
-    aom_write_literal(w, shift >> 4, 3);
+    aom_write_literal(w, shift >> 4, 2);
   }
   if (CFL_SIGN_V(joint_sign) != CFL_SIGN_ZERO) {
     aom_cdf_prob *cdf_v = ec_ctx->cfl_alpha_cdf[CFL_CONTEXT_V(joint_sign)];
     aom_write_symbol(w, CFL_IDX_V(idx), cdf_v, CFL_ALPHABET_SIZE);
-    aom_write_literal(w, shift & 0xf, 3);
+    aom_write_literal(w, shift & 0xf, 2);
   }
 }
 

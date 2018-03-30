@@ -160,7 +160,10 @@ static INLINE void cfl_predict_lbd_c(const int16_t *pred_buf_q3, uint8_t *dst,
                                      int height, int shift) {
   for (int j = 0; j < height; j++) {
     for (int i = 0; i < width; i++) {
-      int alpha_q12 = alpha_q3 * (1 << 9) + ((alpha_q3 > 0) - (alpha_q3 < 0)) * (abs(pred_buf_q3[i]) << 4 >> shift);
+      int alpha_q12 = alpha_q3 * (1 << 9);
+      if (shift < 3) {
+        alpha_q12 += ((alpha_q3 > 0) - (alpha_q3 < 0)) * (abs(pred_buf_q3[i]) >> shift);
+      }
       dst[i] =
           clip_pixel(get_scaled_luma_q0(alpha_q12, pred_buf_q3[i]) + dst[i]);
     }
@@ -187,7 +190,10 @@ void cfl_predict_hbd_c(const int16_t *pred_buf_q3, uint16_t *dst,
                        int height, int shift) {
   for (int j = 0; j < height; j++) {
     for (int i = 0; i < width; i++) {
-      int alpha_q12 = alpha_q3 * (1 << 9) + ((alpha_q3 > 0) - (alpha_q3 < 0)) * (abs(pred_buf_q3[i]) << 4 >> shift);
+      int alpha_q12 = alpha_q3 * (1 << 9);
+      if (shift < 3) {
+        alpha_q12 += ((alpha_q3 > 0) - (alpha_q3 < 0)) * (abs(pred_buf_q3[i]) >> shift);
+      }
       dst[i] = clip_pixel_highbd(
           get_scaled_luma_q0(alpha_q12, pred_buf_q3[i]) + dst[i], bit_depth);
     }
