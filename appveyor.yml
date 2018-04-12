@@ -2,11 +2,8 @@ version: '{build}'
 clone_depth: 1600
 clone_folder: c:\projects\aom
 image: Visual Studio 2017
-configuration: Release
-platform: x86
-environment:
-  matrix:
-  - arch: Win32
+platform:
+ - x86
 install:
   - mkdir c:\yasm
   - set PATH=c:\yasm;%PATH%
