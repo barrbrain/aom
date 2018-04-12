@@ -1,0 +1,28 @@
+version: '{build}'
+clone_depth: 1600
+clone_folder: c:\projects\aom
+image: Visual Studio 2017
+platform:
+  - x86
+configuration:
+  - Release
+install:
+  - choco install -y yasm
+matrix:
+  fast_finish: true
+
+init:
+- echo %APPVEYOR_BUILD_WORKER_IMAGE%
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017" )
+- echo %generator%
+
+before_build:
+- cmd: |-
+    mkdir ..\aom_build
+    cd ..\aom_build
+    cmake --version
+    cmake ..\aom -G %generator% -DCMAKE_SUPPRESS_REGENERATION=1
+
+build_script:
+  - cd c:\projects
+  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Release,Platform=Win32 /verbosity:minimal
