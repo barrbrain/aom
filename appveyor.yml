@@ -19,12 +19,12 @@ init:
 
 before_build:
 - cmd: |-
-    mkdir build
-    cd build
+    mkdir ../aom_build
+    cd ../aom_build
     cmake --version
-    cmake .. -G %generator%
+    cmake ../aom -G %generator%
 
 build:
-  project: c:\projects\aom\build\template.sln
+  project: c:\projects\aom_build\template.sln
   verbosity: minimal
   parallel: true
