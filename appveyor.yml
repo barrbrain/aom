@@ -26,9 +26,8 @@ before_build:
     cd ..\aom_build
     cmake --version
     cmake ..\aom -G %generator%
-    dir c:\projects\aom_build
 
 build:
-  project: c:\projects\aom_build\template.sln
+  project: c:\projects\aom_build\AOM.sln
   verbosity: minimal
   parallel: true
