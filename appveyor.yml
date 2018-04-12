@@ -5,7 +5,7 @@ image: Visual Studio 2017
 platform:
   - x86
 configuration:
-  - Debug
+  - Release
 install:
   - mkdir c:\yasm
   - set PATH=c:\yasm;%PATH%
@@ -28,4 +28,4 @@ before_build:
 
 build_script:
   - cd c:\projects
-  - msbuild aom_build\AOM.sln /maxcpucount
+  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Release,Platform=Win32
