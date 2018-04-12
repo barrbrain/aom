@@ -28,4 +28,4 @@ before_build:
 
 build_script:
   - cd c:\projects
-  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Debug,Platform="Any CPU"
+  - msbuild aom_build\AOM.sln /maxcpucount
