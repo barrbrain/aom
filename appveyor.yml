@@ -26,7 +26,6 @@ before_build:
     cmake --version
     cmake ..\aom -G %generator%
 
-build:
-  project: c:\projects\aom_build\AOM.sln
-  verbosity: minimal
-  parallel: true
+build_script:
+  - cd c:\projects
+  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Debug,Platform=x86
