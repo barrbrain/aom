@@ -1,0 +1,30 @@
+version: '{build}'
+clone_folder: c:\projects\aom
+image: Visual Studio 2017
+configuration: Release
+platform: x86
+environment:
+  matrix:
+  - arch: Win32
+matrix:
+  fast_finish: true
+
+init:
+- set arch=
+- if "%arch%"=="Win32" ( set arch= Win32)
+- echo %arch%
+- echo %APPVEYOR_BUILD_WORKER_IMAGE%
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017%arch%" )
+- echo %generator%
+
+before_build:
+- cmd: |-
+    mkdir build
+    cd build
+    cmake --version
+    cmake .. -G %generator%
+
+build:
+  project: c:\projects\aom\build\template.sln
+  verbosity: minimal
+  parallel: true
