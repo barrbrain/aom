@@ -24,7 +24,7 @@ before_build:
     mkdir ..\aom_build
     cd ..\aom_build
     cmake --version
-    cmake ..\aom -G %generator%
+    cmake ..\aom -G %generator% -DCMAKE_SHARED_LINKER_FLAGS_RELEASE=/LTCG:PGOptimize
 
 build_script:
   - cd c:\projects
