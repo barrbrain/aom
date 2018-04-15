@@ -28,4 +28,4 @@ before_build:
 
 build_script:
   - cd c:\projects
-  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Release,Platform=Win32
+  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Release,Platform=Win32 /verbosity:minimal
