@@ -5,7 +5,7 @@ image: Visual Studio 2017
 platform:
   - x86
 configuration:
-  - Release
+  - Debug
 install:
   - choco install -y yasm
 matrix:
@@ -25,4 +25,4 @@ before_build:
 
 build_script:
   - cd c:\projects
-  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Release,Platform=Win32 /verbosity:minimal
+  - msbuild aom_build\AOM.sln /maxcpucount /property:Configuration=Debug,Platform=Win32 /verbosity:minimal
