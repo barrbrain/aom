@@ -7,10 +7,7 @@ platform:
 configuration:
   - Release
 install:
-  - mkdir c:\yasm
-  - set PATH=c:\yasm;%PATH%
-  - if "%PLATFORM%" == "x86" curl -o "c:\yasm\yasm.exe" http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win32.exe
-  - yasm --version
+  - choco install -y yasm
 matrix:
   fast_finish: true
 
@@ -24,7 +21,7 @@ before_build:
     mkdir ..\aom_build
     cd ..\aom_build
     cmake --version
-    cmake ..\aom -G %generator% -DCMAKE_SHARED_LINKER_FLAGS_RELEASE=/LTCG:PGOptimize
+    cmake ..\aom -G %generator% -DCMAKE_SUPPRESS_REGENERATION=1
 
 build_script:
   - cd c:\projects
